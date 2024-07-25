@@ -3,8 +3,10 @@ from rest_framework.response import Response
 
 from django.conf import settings
 
-from .serializers import AccountManagerSerializer, LoginSerializer
+from .serializers import AccountManagerSerializer, LoginSerializer, AccountUserSerializer, PasswordResetSerializer
 from .authentications import JWTAuthentication
+from .permissions import IsAuthenticated
+from bson import ObjectId
 
 db = settings.DB
 
@@ -36,16 +38,78 @@ class LoginAccountManager(generics.GenericAPIView):
         
         token = JWTAuthentication.create_jwt(user)
 
+        users = db.account_user.find({'account_manager_id': str(user['_id'])})
+
         return Response({
             'status': 'success',
             'message': 'You have logged in successfully',
             'access_token': token,
-            'user': {
+            'users': {
                 'email': user['email'],
                 'first_name': user['first_name'],
                 'last_name': user['last_name']
         }
     })
+
+class CreateAccountUser(generics.GenericAPIView):
+    serializer_class = AccountUserSerializer
+    permission_classes = [IsAuthenticated,]
+    def post(self, request):
+        data = request.data
+        user = request.user
+        serializer = self.serializer_class(data=data)
+        if serializer.is_valid():
+            serializer.validated_data['account_manager_id'] = str(user['_id'])
+            user_data = serializer.save()
+
+            # Email Functionality
+
+            return Response({
+                'status': 'success',
+                'user_data': {
+                    'id': str(user_data['id']),
+                    'email': user_data['email'],
+                    'first_name': user_data['first_name'],
+                    'account_number': user_data['account_number']
+                }
+            }, status=status.HTTP_201_CREATED)
+        return Response({'status': 'failed', 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    
+
+class PasswordResetView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = PasswordResetSerializer
+    def post(self, request):
+        user = request.user
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            account_manager = db.account_manager.find_one({'_id': user['_id']})
+            if serializer.validated_data['old_password'] != account_manager['password']:
+                return Response({'status': 'failed', 'error': 'Password is not correct!'}, status=status.HTTP_400_BAD_REQUEST)
+            if serializer.validated_data['new_password'] != serializer.validated_data['confirm_password']:
+                return Response({'status': 'failed', 'error': 'Passwords mismatch!'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            db.account_manager.update_one({'_id': user['_id']}, {'$set': {'password': serializer.validated_data['new_password']}})
+            return Response({'status': 'success'}, status=status.HTTP_200_OK)
+        return Response({'status': 'failed', 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    
+
+class SuspendAccountUser(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request, acc_id):
+        update = {'$set': {'status': 'suspended'}}
+        account_user = db.account_user.find_one_and_update({'_id': ObjectId(acc_id)}, update)
+        return Response({'status': 'success'}, status=status.HTTP_200_OK)
+    
+
+
+    
+    
+            
+
+
+        
+
 
             
 

@@ -34,7 +34,7 @@ class JWTAuthentication(authentication.BaseAuthentication):
         if email is None:
             AuthenticationFailed('User identifier  not found in JWT')
 
-        user = db.users.find_one({'email': email})
+        user = db.account_manager.find_one({'email': email})
         if user is None:
             raise AuthenticationFailed('User not found')
         
