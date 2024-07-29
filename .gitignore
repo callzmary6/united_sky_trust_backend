@@ -1,3 +1,5 @@
 env
 .env
 practice.py
+GeoLite2-City.mmdb
+GeoLite2-Country.mmdb

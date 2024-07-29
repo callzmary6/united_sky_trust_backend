@@ -34,7 +34,7 @@ class JWTAuthentication(authentication.BaseAuthentication):
         if email is None:
             AuthenticationFailed('User identifier  not found in JWT')
 
-        user = db.account_manager.find_one({'email': email})
+        user = db.account_user.find_one({'email': email})
         if user is None:
             raise AuthenticationFailed('User not found')
         
@@ -49,7 +49,7 @@ class JWTAuthentication(authentication.BaseAuthentication):
         # create the jwt payload 
         payload = {
             'user_identifier': user['email'],
-            'exp': datetime.now() + timedelta(days=1),
+            'exp': datetime.now() + timedelta(days=5),
             'iat': datetime.now().timestamp(),
             'id': str(user['_id']),
         }

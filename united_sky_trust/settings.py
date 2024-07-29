@@ -2,6 +2,7 @@ from pathlib import Path
 import pymongo
 import environ
 import os
+import cloudinary
 
 env = environ.Env()
 
@@ -53,7 +54,9 @@ ROOT_URLCONF = 'united_sky_trust.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [
+            os.path.join(BASE_DIR, 'templates'),
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -122,3 +125,21 @@ REST_FRAMEWORK = {
         # 'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
 }
+
+# CLOUDINARY SETTINGS
+cloudinary.config(
+    cloud_name=env('cloud_name'),
+    api_key=env('api_key'),
+    api_secret=env('api_secret')
+)
+
+# EMAIL CONFIGURATION
+EMAIL_USE_SSL = True
+EMAIL_HOST = 'smtp.titan.email'
+EMAIL_PORT = 465
+EMAIL_HOST_USER = env('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
+
+
+
+

@@ -28,7 +28,7 @@ class GetRegisteredUsers(generics.GenericAPIView):
                 {'account_balance': search_regex},
             ]
         
-        users = db.account_user.find(query, {'full_name': 1, 'account_balance': 1, 'account_number': 1, 'is_verified': 1, 'date_created': 1, 'status': 1})
+        users = db.account_user.find(query, {'full_name': 1, 'email': 1, 'account_balance': 1, 'account_number': 1, 'is_verified': 1, 'date_created': 1, 'status': 1})
 
         total_users = db.account_user.count_documents(query)
 
@@ -62,7 +62,7 @@ class FundAccount(generics.GenericAPIView):
                 for i in range(serializer.validated_data['frequency']):
                     new_account_balance -= serializer.validated_data['amount']
 
-            updated_account_user = db.account_user.update_one({'account_number': acn}, {'$set':{'account_balance': new_account_balance}})
+            db.account_user.update_one({'account_number': acn}, {'$set':{'account_balance': new_account_balance}})
 
             serializer.validated_data['account_user_id'] = str(account_user['_id'])
             serializer.validated_data['account_manager_id'] = str(user['_id'])
