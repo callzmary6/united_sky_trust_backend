@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import RegisterAccountManager, LoginAccountManager, CreateAccountUser, PasswordResetView, SuspendAccountUser, VerifyAccountUser, ApproveAccountUser, TwoFactorAuthentication, LoginAccountUser, GenerateOTPCode
+from .views import RegisterAccountManager, LoginAccountManager, CreateAccountUser, PasswordResetView, SuspendAccountUser, VerifyAccountUser, ApproveAccountUser, TwoFactorAuthentication, LoginAccountUser, GenerateOTPCode,  ReturnTransactions
 
 urlpatterns = [
     path('register_admin', RegisterAccountManager.as_view(), name='register'),
@@ -13,4 +13,6 @@ urlpatterns = [
     path('approve_user/<str:acc_id>', ApproveAccountUser.as_view(), name='approve-account'),
     path('2fa/<str:acc_id>', TwoFactorAuthentication.as_view(), name='enable-2fa'),
     path('regenerate_otp/<str:user_id>/<str:no_otp>', GenerateOTPCode.as_view(), name='regenerate-otp'),
+
+    path('transactions/', ReturnTransactions.as_view(), name='transactions'),
 ]

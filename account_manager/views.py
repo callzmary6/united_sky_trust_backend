@@ -2,13 +2,26 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 
 from authentication.permissions import IsAuthenticated
+from authentication.serializers import AccountManagerSerializer
 from .serializers import TransactionSerializer
 
 from django.conf import settings
 from django.core.paginator import Paginator
 import re
+from pymongo import ReturnDocument
 
 db = settings.DB
+
+responses = {
+    'success': status.HTTP_200_OK,
+    'failed': status.HTTP_400_BAD_REQUEST
+}
+
+
+class Transactions:
+    @staticmethod
+    def get_all_transactions():
+        return db.transactions.find({})
 
 class GetRegisteredUsers(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
@@ -37,10 +50,7 @@ class GetRegisteredUsers(generics.GenericAPIView):
         paginator = Paginator(list(sorted_users), entry)
         page_obj = paginator.get_page(page)
 
-        new_users = []
-        for user in page_obj:
-            user['_id'] = str(user['_id'])
-            new_users.append(user)
+        new_users = list(page_obj)
 
         return Response({'status': 'success', 'registered_users': new_users, 'total_account_users': total_users, 'current_page': page}, status=status.HTTP_200_OK)
     
@@ -114,6 +124,22 @@ class GetTransactions(generics.GenericAPIView):
             new_transactions.append(transaction)
 
         return Response({'status': 'success', 'transactions': new_transactions, 'no_of_transactions': total_transactions, 'current_page': page}, status=status.HTTP_200_OK)
+
+
+class UpdateAccountProfile(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def put(self, request):
+        data = request.data
+        serializer = AccountManagerSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        query = {'_id': request.user['_id']}
+        update_field = {'$set': serializer.validated_data}
+        db.account_user.find_one_and_update(query, update_field, return_document=ReturnDocument.AFTER)
+        return Response({'status': 'success'}, status=responses['success'])
+
+    
+    
+
     
 
 

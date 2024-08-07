@@ -16,6 +16,16 @@ from datetime import datetime, timedelta
 
 db = settings.DB
 
+class Transactions:
+    @staticmethod
+    def get_all_transactions():
+        return list(db.transactions.find({}, {'_id': 0}))
+
+class ReturnTransactions(generics.GenericAPIView):
+    def get(self, request):
+        transactions = Transactions.get_all_transactions()
+        return Response({'transactions': transactions}, status=status.HTTP_200_OK)
+
 class RegisterAccountManager(generics.GenericAPIView):
     def post(self, request):
         serializer = AccountManagerSerializer(data=request.data)
@@ -98,7 +108,7 @@ class CreateAccountUser(generics.GenericAPIView):
             return Response({
                 'status': 'success',
                 'user_data': {
-                    'id': str(user_data['id']),
+                    '_id': user_data['_id'],
                     'email': user_data['email'],
                     'first_name': user_data['first_name'],
                     'account_number': user_data['account_number'],
@@ -150,26 +160,7 @@ class LoginAccountUser(generics.GenericAPIView):
                 return Response({'status': 'success', 'message': 'check your email for 2fa code'}, status=responses['success'])
 
             token = JWTAuthentication.create_jwt(account_user)
-
-            all_transactions = []
-            credit = []
-            debit = []
-            transactions = db.transactions.find({'account_user_id': str(account_user['_id'])})
-
-            sorted_transactions = sorted(transactions, key=lambda x: x['created_at'], reverse=True)
-
-            for transaction in sorted_transactions:
-                transaction['_id'] = str(transaction['_id'])
-                all_transactions.append(transaction)
-
-                if transaction['type'] == 'Credit':
-                    transaction['_id'] = str(transaction['_id'])
-                    credit.append(transaction)
-                if transaction['type'] == 'Debit':
-                    transaction['_id'] = str(transaction['_id'])
-                    debit.append(transaction)
-
-
+          
             return Response({
                 'status': 'success',
                 'token': token,
@@ -177,11 +168,6 @@ class LoginAccountUser(generics.GenericAPIView):
                     'full_name': account_user['full_name'],
                     'account_balance': account_user['account_balance'],
                     'profile_picture': account_user['profile_picture'],
-                    'transactions': {
-                        'all': all_transactions,
-                        'credit': credit,
-                        'debit': debit,
-                    },
                     'account_type': account_user['account_type']
                 }
             }, status=responses['success'])
