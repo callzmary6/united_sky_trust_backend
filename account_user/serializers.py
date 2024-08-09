@@ -4,8 +4,9 @@ import uuid
 
 from django.conf import settings
 from datetime import datetime, timedelta
-from account_manager.utils import Util
-from authentication import utils
+from account_manager.utils import Util as manager_util
+from .utils import Util as user_util
+from authentication.utils import Util as auth_util
 
 db = settings.DB
 
@@ -20,7 +21,7 @@ class TransferSerializer(serializers.Serializer):
     account_holder = serializers.CharField()
     beneficiary_account_holder = serializers.CharField()
     description = serializers.CharField()
-    ref_number = serializers.CharField(default=Util.generate_code())
+    ref_number = serializers.CharField(default=manager_util.generate_code())
     status = serializers.CharField(read_only=True)
     created_at = serializers.DateTimeField(read_only=True)
 
@@ -43,10 +44,26 @@ class VirtualCardSerializer(serializers.Serializer):
     is_activated = serializers.BooleanField(default=False)
     created_at = serializers.DateTimeField(read_only=True)
 
+    def check_card_type(self, value):
+        if value == 'master':
+            return 5384
+        if value == 'visa':
+            return 4902
+        if value == 'discover':
+            return 6011
+        else:
+            raise serializers.ValidationError({'card_type': 'please enter a valid card type'})
+
+
+
     def create(self, validated_data):
+        validated_data['card_type'] = validated_data['card_type'].lower()
+
+        prefix = self.check_card_type(validated_data['card_type'])  
+
         validated_data['created_at'] = datetime.now()
-        validated_data['card_number'] = utils.Util.generate_number(16)
-        validated_data['cvv'] = utils.Util.generate_number(3)
+        validated_data['card_number'] = user_util.generate_card_number(12, prefix)
+        validated_data['cvv'] = auth_util.generate_number(3)
         validated_data['valid_through'] = validated_data['created_at'] + timedelta(days=1095)
 
         return db.virtual_cards.insert_one(validated_data)

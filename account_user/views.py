@@ -9,7 +9,7 @@ from authentication.utils import Util
 from account_manager import utils
 
 from .serializers import TransferSerializer, VirtualCardSerializer, FundVirtualCardSerializer
-from .utils import generate_formatted_code
+from .utils import Util as user_util
 
 from django.conf import settings
 import uuid
@@ -288,7 +288,7 @@ class FundVirtualCard(generics.GenericAPIView):
             with client.start_session() as session:
                 with session.start_transaction():
                     ref_number = utils.Util.generate_code()
-                    description = generate_formatted_code()
+                    description = user_util.generate_formatted_code()
                     security_answer = serializer.validated_data['security_answer']
                     amount = serializer.validated_data['amount']
 
