@@ -147,13 +147,13 @@ class TransferFundsView(generics.GenericAPIView):
                 with session.start_transaction():
                     sender_result = db.account_user.find_one_and_update({
                         '_id': user['_id'], 'account_balance': {'$gte': amount}},
-                        {'$inc': {'account_balance': -amount}, '$set': {'is_verified_cot': False, 'is_verified_imf': False, 'is_verified_otp': False}},
+                        {'$inc': {'account_balance': -amount}, '$set': {'is_verified_cot': False, 'is_verified_imf': False, 'is_verified_otp': False, 'last_balance_update_time': datetime.datetime.now()}},
                         return_document=True,
                         session=session
                     )
 
                     serializer.validated_data['ref_number'] = utils.Util.generate_code()
-                    serializer.validated_data['created_at'] = datetime.now()
+                    serializer.validated_data['created_at'] = sender_result['last_balance_update_time']
 
                     # send debit email and sms functionality
                     
@@ -325,6 +325,21 @@ class FundVirtualCard(generics.GenericAPIView):
 
                     return Response({'status': 'success', 'updated_balance': virtual_card_update['balance']}, status=responses['success'])
         return Response({'status': 'failed', 'error': 'card is unavailable for funding!'}, status=responses['failed'])
+    
+
+class GetVirtualCards(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user
+
+        virtual_cards_data = db.virtual_cards.find({'account_user_id': user['_id']}, {'security_question': 0, 'answer': 0, 'account_user_id': 0, 'account_manager_id': 0, 'last_fund_time': 0}).sort('created_at', pymongo.DESCENDING)
+
+        virtual_cards = list(virtual_cards_data)
+        total_cards = len(virtual_cards)
+
+        return Response({'status': 'success', 'virtual_cards': virtual_cards, 'total_virtual_cards': total_cards}, status=responses['success'])
+
+
 
 
                 
