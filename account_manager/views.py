@@ -8,9 +8,11 @@ from .serializers import TransactionSerializer
 from django.conf import settings
 from django.core.paginator import Paginator
 import re
+import pymongo
 from pymongo import ReturnDocument
 
 db = settings.DB
+client = settings.MONGO_CLIENT
 
 responses = {
     'success': status.HTTP_200_OK,
@@ -136,6 +138,45 @@ class UpdateAccountProfile(generics.GenericAPIView):
         update_field = {'$set': serializer.validated_data}
         db.account_user.find_one_and_update(query, update_field, return_document=ReturnDocument.AFTER)
         return Response({'status': 'success'}, status=responses['success'])
+    
+# Virtual Card Functionlity
+class GetVirtualCards(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user
+        query = {'account_manager_id': user['_id']}
+
+        filter = {'card_holder_name': 1, 'card_type': 1, 'balance': 1, 'card_number': 1, 'cvv': 1, 'valid_through': 1, 'is_activated': 1}
+
+        virtual_cards_obj = db.virtual_cards.find(query, filter).sort('created_at', pymongo.DESCENDING)
+
+        virtual_cards = list(virtual_cards_obj)
+
+        return Response({
+            'status': 'success',
+            'virtual_cards': virtual_cards
+        }, status=responses['success'])
+    
+class ActivateVirtualCard(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request, vc_id):
+        user = request.user
+        is_activated = False
+        query = {'_id': vc_id, 'account_manager_id': user['_id'], 'is_activated': is_activated}
+        virtual_card = db.virtual_cards.find_one_and_update(query, {'$set': {'is_activated': True}})
+        if virtual_card is None:
+            query['is_activated'] = True
+            virtual_card = db.virtual_cards.find_one_and_update(query, {'$set': {'is_activated': False}})
+            # send email functionality
+            return Response({'status': 'success', 'message': 'virtual card deactivated'}, status=responses['success'])
+        return Response({'status': 'success', 'message': 'virtual card activated'}, status=responses['success'])
+    
+
+
+
+
+
+
 
     
     

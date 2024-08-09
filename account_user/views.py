@@ -4,15 +4,17 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 
 from authentication.authentications import JWTAuthentication
-from account_manager.serializers import TransactionSerializer
 from authentication.permissions import IsAuthenticated
 from authentication.utils import Util
 from account_manager import utils
 
-from .serializers import TransferSerializer
+from .serializers import TransferSerializer, VirtualCardSerializer, FundVirtualCardSerializer
+from .utils import generate_formatted_code
 
 from django.conf import settings
 import uuid
+import pymongo
+import datetime
 
 db = settings.DB
 client = settings.MONGO_CLIENT
@@ -152,8 +154,11 @@ class TransferFundsView(generics.GenericAPIView):
 
                     serializer.validated_data['ref_number'] = utils.Util.generate_code()
                     serializer.validated_data['created_at'] = datetime.now()
+
+                    # send debit email and sms functionality
                     
                     if not sender_result:
+                        session.abort_transaction()
                         return Response({'status': 'failed', 'message': 'Insufficient Funds!'}, status=responses['failed'])
                     
                     receiver_result = db.account_user.find_one_and_update(
@@ -164,8 +169,11 @@ class TransferFundsView(generics.GenericAPIView):
                         )
                     
                     serializer.validated_data['beneficiary_account_holder'] = receiver_result['full_name']
+
+                    # send credit email and sms functionality
                     
                     if not receiver_result:
+                        session.abort_transaction()
                         return Response({'status': 'failed', 'message': 'User not found!'}, status=responses['failed'])
                     
                     # create transaction records
@@ -179,7 +187,7 @@ class TransferFundsView(generics.GenericAPIView):
                         'frequency': 1,
                         'account_user_id': user['_id'],
                         'account_manager_id': account_manager['_id'],
-                        'account_holder': user['full_name'],
+                        'account_holder': receiver_result['full_name'],
                         'account_number': account_number,
                         'status': 'Completed',
                         'ref_number': serializer.validated_data['ref_number'],
@@ -210,6 +218,124 @@ class TransferFundsView(generics.GenericAPIView):
             return Response({'status': 'success', 'message': 'Transaction Successful'}, status=responses['success'])
         
         return Response({'status': 'failed', 'error': 'codes not verified'}, status=responses['failed'])
+
+
+class GetUserTransactions(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated,]
+
+    def get(self, request):
+        user = request.user
+
+        query = {'account_user_id': user['_id']}
+        filter = {'ref_number': 1, 'amount': 1, 'status': 1, 'type': 1, 'description': 1, 'scope': 1, 'created_at': 1}
+
+        transaction_data = db.transactions.find(query, filter).sort('created_at', pymongo.DESCENDING)
+
+        transactions = list(transaction_data)
+
+        return Response({'status': 'success', 'transactions': transactions, 'total_transactions': len(transactions)}, status=responses['success'])
+    
+class VirtualCardRequest(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated, ]
+    def post(self, request):
+        user = request.user
+        serializer = VirtualCardSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        account_manager = AccountManager.get_account_manager()
+
+        # use sessions here
+
+        serializer.validated_data['account_user_id'] = user['_id']
+        serializer.validated_data['account_manager_id'] = account_manager['_id']
+        serializer.validated_data['card_holder_name'] = user['full_name']
+        virtual_card_data = serializer.save()
+
+        virtual_card = db.virtual_cards.find_one({'_id': virtual_card_data.inserted_id})
+        
+
+        db.security_questions.insert_one({
+        '_id': uuid.uuid4().hex[:24],
+        'question': virtual_card['security_question'],
+        'answer': virtual_card['answer'],
+        'account_user_id': virtual_card['_id'],
+        'account_manager_id': virtual_card['account_manager_id']
+        })
+
+        return Response({
+            'status': 'success',
+            'card_type': virtual_card['card_type'],
+            'card_number': virtual_card['card_number'],
+            'valid_through': virtual_card['valid_through'],
+            'cvv': virtual_card['cvv'],
+            'balance': virtual_card['balance'],
+            'is_active': virtual_card['is_activated']
+            },
+            status=responses['success']
+            )
+
+class FundVirtualCard(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request, vc_id):
+        user = request.user
+        data = request.data
+        serializer = FundVirtualCardSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+
+        query = {'_id': vc_id, 'account_user_id': user['_id']}
+        virtual_card = db.virtual_cards.find_one(query)
+        
+        if virtual_card['is_activated'] == True:
+            with client.start_session() as session:
+                with session.start_transaction():
+                    ref_number = utils.Util.generate_code()
+                    description = generate_formatted_code()
+                    security_answer = serializer.validated_data['security_answer']
+                    amount = serializer.validated_data['amount']
+
+                    account_user = db.account_user.find_one({'_id': user['_id'], 'account_balance': {'$gte': amount}}, session=session)
+
+                    if account_user == None:
+                        session.abort_transaction()
+                        return Response({'status': 'failed', 'error': 'Insufficient Balance'}, status=responses['failed'])
+                    
+                    if security_answer != virtual_card['answer']:
+                        session.abort_transaction()
+                        return Response({'status': 'failed', 'error': 'security answer is not correct!'}, status=responses['failed'])
+                    
+                    virtual_card_update = db.virtual_cards.find_one_and_update(query,
+                        {'$inc': {'balance': amount}, '$set': {'last_fund_time': datetime.datetime.now()}},
+                        return_document=True,
+                        session=session
+                    )
+                    db.transactions.insert_one({
+                        '_id': uuid.uuid4().hex[:24],
+                        'type': 'Debit',
+                        'amount': amount,
+                        'scope': 'VirtualCard Top-up',
+                        'description': description,
+                        'frequency': 1,
+                        'account_user_id': user['_id'],
+                        'account_manager_id': user['account_manager_id'],
+                        'account_holder': user['full_name'],
+                        'account_number': user['account_number'],
+                        'status': 'Completed',
+                        'ref_number': ref_number,
+                        'created_at': virtual_card_update['last_fund_time'],
+                    }, session=session)
+
+                    return Response({'status': 'success', 'updated_balance': virtual_card_update['balance']}, status=responses['success'])
+        return Response({'status': 'failed', 'error': 'card is unavailable for funding!'}, status=responses['failed'])
+
+
+                
+
+    
+
+    
+
+
+
+
         
             
 
