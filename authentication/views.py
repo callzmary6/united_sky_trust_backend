@@ -33,8 +33,8 @@ class RegisterAccountManager(generics.GenericAPIView):
         return Response({'status': 'failed', 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     
 class CheckToken(generics.GenericAPIView):
-    def post(self, request):
-        token = request.data.get('token', '')
+    def get(self, request):
+        token = request.GET.get('token', '')
 
         try:
             jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
