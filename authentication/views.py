@@ -34,7 +34,7 @@ class RegisterAccountManager(generics.GenericAPIView):
     
 class CheckToken(generics.GenericAPIView):
     def post(self, request):
-        token = request.GET.get('token', '')
+        token = request.data.get('token', '')
 
         try:
             jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
