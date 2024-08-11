@@ -9,22 +9,20 @@ from .serializers import AccountManagerSerializer, LoginAdminSerializer, Account
 from .authentications import JWTAuthentication
 from .permissions import IsAuthenticated
 from .utils import Util
+from united_sky_trust.base_response import BaseResponse
 
 from bson import ObjectId
 from cloudinary.uploader import upload
 from datetime import datetime, timedelta
+import jwt
 
 db = settings.DB
-
+            
 class Transactions:
     @staticmethod
     def get_all_transactions():
         return list(db.transactions.find({}, {'_id': 0}))
-
-class ReturnTransactions(generics.GenericAPIView):
-    def get(self, request):
-        transactions = Transactions.get_all_transactions()
-        return Response({'transactions': transactions}, status=status.HTTP_200_OK)
+    
 
 class RegisterAccountManager(generics.GenericAPIView):
     def post(self, request):
@@ -34,6 +32,16 @@ class RegisterAccountManager(generics.GenericAPIView):
             return Response({'status': 'success', 'data': {'email': serializer.validated_data['email'], 'first_name': serializer.validated_data['first_name'], 'last_name': serializer.validated_data['last_name']}}, status=status.HTTP_201_CREATED)
         return Response({'status': 'failed', 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     
+class CheckToken(generics.GenericAPIView):
+    def post(self, request):
+        token = request.GET.get('token', '')
+
+        try:
+            jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            return BaseResponse.response(status=True, message='token is valid', HTTP_STATUS=status.HTTP_200_OK)
+        except Exception as e:
+            return BaseResponse.response(status=False, message=str(e), HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
+    
 class LoginAccountManager(generics.GenericAPIView):
     serializer_class = LoginAdminSerializer
     def post(self, request):
@@ -41,10 +49,6 @@ class LoginAccountManager(generics.GenericAPIView):
         password = request.data.get('password')
 
         errors = {}
-        responses = {
-            'success': status.HTTP_200_OK,
-            'failed': status.HTTP_400_BAD_REQUEST
-        }
 
         if not email and not password:
             errors['email'] = 'email should not be empty'
@@ -55,27 +59,38 @@ class LoginAccountManager(generics.GenericAPIView):
             errors['password'] = 'password should not be empty'
 
         if errors:
-            return Response(errors, status=responses['failed'])
+            return BaseResponse.response(
+                status=False,
+                message=errors,
+                HTTP_STATUS=status.HTTP_400_BAD_REQUEST
+            )
         
         user = db.account_user.find_one({'email': email, 'password': password})
         
         if not user:
-            return Response({'status': 'failed', 'error': 'Invalid Credentials'}, status=status.HTTP_400_BAD_REQUEST)
-        
+            return BaseResponse.response(
+                status=False,
+                message='Invalid Credentials',
+                HTTP_STATUS=status.HTTP_400_BAD_REQUEST
+            )
+
         token = JWTAuthentication.create_jwt(user)
-
-        # users = db.account_user.find({'account_user_id': str(user['_id'])})
-
-        return Response({
-            'status': 'success',
-            'message': 'You have logged in successfully',
+        
+        data = {
             'access_token': token,
             'users': {
                 'email': user['email'],
                 'first_name': user['first_name'],
                 'last_name': user['last_name']
+            }
         }
-    })
+
+        return BaseResponse.response(
+            status=True,
+            message='You have logged in successfully',
+            data=data,
+            HTTP_STATUS=status.HTTP_201_CREATED
+        )
 
 class CreateAccountUser(generics.GenericAPIView):
     serializer_class = AccountUserSerializer
