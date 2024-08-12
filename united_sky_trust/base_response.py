@@ -2,7 +2,7 @@ from rest_framework.response import Response
 
 class BaseResponse:
     @staticmethod
-    def response(status, message, HTTP_STATUS, data=None):
+    def response(status, HTTP_STATUS, message=None, data=None):
         base_response = {
                 'status': status,
                 'message': message,

@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from authentication.permissions import IsAuthenticated
 from authentication.serializers import AccountManagerSerializer
 from .serializers import TransactionSerializer
+from united_sky_trust.base_response import BaseResponse
 
 from django.conf import settings
 from django.core.paginator import Paginator
@@ -18,7 +19,6 @@ responses = {
     'success': status.HTTP_200_OK,
     'failed': status.HTTP_400_BAD_REQUEST
 }
-
 
 class Transactions:
     @staticmethod
@@ -53,8 +53,18 @@ class GetRegisteredUsers(generics.GenericAPIView):
         page_obj = paginator.get_page(page)
 
         new_users = list(page_obj)
+        
+        data = {
+            'registered_users': new_users,
+            'total_account_users': total_users,
+            'current_page': page
+        }
 
-        return Response({'status': 'success', 'registered_users': new_users, 'total_account_users': total_users, 'current_page': page}, status=status.HTTP_200_OK)
+        return BaseResponse.response(
+            status=True,
+            HTTP_STATUS=status.HTTP_200_OK,
+            data=data
+        )
     
 class FundAccount(generics.GenericAPIView):
     permission_classes = [IsAuthenticated, ]

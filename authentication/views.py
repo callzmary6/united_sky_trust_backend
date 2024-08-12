@@ -204,16 +204,17 @@ class VerifyAccountUser(generics.GenericAPIView):
         
 class GenerateOTPCode(generics.GenericAPIView):
     def get(self, request, user_id, no_otp):
-        user_data = db.account_user.find_one({'_id': ObjectId(user_id)})
+        user_data = db.account_user.find_one({'_id': user_id})
         code = Util.generate_number(int(no_otp))
         expire_at = datetime.utcnow() + timedelta(seconds=120)
         db.otp_codes.insert_one({'user_id': user_data['_id'], 'code': code, 'expireAt': expire_at})
         data = {
+            'subject': 'Verification code',
             'to': user_data['email'],
             'body': f'Use this otp to verify your account {code}'
         }
         Util.email_send(data)
-        return Response({'status': 'success', 'otp_code': code})
+        return BaseResponse.response(status=True, message='otp has been swent to your email', HTTP_STATUS=status.HTTP_200_OK)
 
 
 class PasswordResetView(generics.GenericAPIView):
@@ -241,19 +242,19 @@ class SuspendAccountUser(generics.GenericAPIView):
         if account_user['is_suspended'] == True:
             update = {'$set': {'is_suspended': False, 'status': 'Active'}}
             db.account_user.update_one({'_id': ObjectId(acc_id)}, update)
-            return Response({'status:': 'success', 'message': 'Account is active'}, status=status.HTTP_200_OK)
+            return BaseResponse.response(status=True, message='Account is active', data=None, HTTP_STATUS=status.HTTP_200_OK)
 
         update = {'$set': {'is_suspended': True, 'status': 'Suspended'}}
         db.account_user.update_one({'_id': ObjectId(acc_id)}, update)
-        return Response({'status:': 'success', 'message': 'Account is suspended'}, status=status.HTTP_200_OK)
-    
+        return BaseResponse.response(status=True, message='Account is suspended', data=None, HTTP_STATUS=status.HTTP_200_OK)
+        
 
 class ApproveAccountUser(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     def post(self, request, acc_id):
         update = {'$set': {'is_approved': True}}
         db.account_user.update_one({'_id': ObjectId(acc_id)}, update)
-        return Response({'status': 'success'}, status=status.HTTP_200_OK)
+        return BaseResponse.response(status=True, message='Account is approved', HTTP_STATUS=status.HTTP_200_OK)
     
 
 class TwoFactorAuthentication(generics.GenericAPIView):
@@ -263,11 +264,11 @@ class TwoFactorAuthentication(generics.GenericAPIView):
         if account_user['is_two_factor'] == False:
             update = {'$set': {'is_two_factor': True}}
             db.account_user.update_one({'_id': ObjectId(acc_id)}, update)
-            return Response({'status:': 'success', 'message': 'two factor enabled'}, status=status.HTTP_200_OK)
+            return BaseResponse.response(status=True, message='two factor enabled', HTTP_STATUS=status.HTTP_200_OK)
         
         update = {'$set': {'is_two_factor': False}}
         db.account_user.update_one({'_id': ObjectId(acc_id)}, update)
-        return Response({'status:': 'success', 'message': 'two factor disabled'}, status=status.HTTP_200_OK)
+        return BaseResponse.response(status=True, message='two factor disbaled', HTTP_STATUS=status.HTTP_200_OK)
         
 
     
