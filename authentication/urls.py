@@ -5,7 +5,7 @@ from .views import RegisterAccountManager, LoginAccountManager, CreateAccountUse
 urlpatterns = [
     path('register_admin', RegisterAccountManager.as_view(), name='register'),
     path('login_admin', LoginAccountManager.as_view(), name='login'),
-    path('check_token', CheckToken.as_view(), name='check-token'),
+    path('check_token/<str:token>', CheckToken.as_view(), name='check-token'),
     path('register_user',  CreateAccountUser.as_view(), name='register-user'),
     path('login_user', LoginAccountUser.as_view(), name='login-user'),
     path('verify_user/<str:user_id>', VerifyAccountUser.as_view(), name='verify-account'),
