@@ -51,12 +51,12 @@ class LoginAccountManager(generics.GenericAPIView):
         errors = {}
 
         if not email and not password:
-            errors['email'] = 'email should not be empty'
-            errors['password'] = 'password should not be empty'
+            errors['email'] = 'Email should not be empty!'
+            errors['password'] = 'Password should not be empty!'
         if not email:
-            errors['email'] = 'email should not be empty'
+            errors['email'] = 'Email should not be empty!'
         if not password:
-            errors['password'] = 'password should not be empty'
+            errors['password'] = 'Password should not be empty!'
 
         if errors:
             return BaseResponse.response(
@@ -70,7 +70,7 @@ class LoginAccountManager(generics.GenericAPIView):
         if not user:
             return BaseResponse.response(
                 status=False,
-                message='Invalid Credentials',
+                message='Invalid Credentials!',
                 HTTP_STATUS=status.HTTP_400_BAD_REQUEST
             )
 
@@ -146,12 +146,12 @@ class LoginAccountUser(generics.GenericAPIView):
         }
 
         if not account_id and not password:
-            errors['email'] = 'account_id should not be empty'
-            errors['password'] = 'password should not be empty'
+            errors['account_id'] = 'Account_id should not be empty!'
+            errors['password'] = 'Password should not be empty!'
         if not account_id:
-            errors['email'] = 'account_id should not be empty'
+            errors['email'] = 'Account_id should not be empty!'
         if not password:
-            errors['password'] = 'password should not be empty'
+            errors['password'] = 'Password should not be empty!'
 
         if errors:
             return Response(errors, status=responses['failed'])
