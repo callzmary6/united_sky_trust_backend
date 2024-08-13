@@ -29,7 +29,7 @@ class RegisterAccountManager(generics.GenericAPIView):
         serializer = AccountManagerSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response({'status': 'success', 'data': {'email': serializer.validated_data['email'], 'first_name': serializer.validated_data['first_name'], 'last_name': serializer.validated_data['last_name']}}, status=status.HTTP_201_CREATED)
+            return Response({'status': 'success', 'data': {'email': serializer.validated_data['email'], 'first_name': serializer.validated_data['first_name'], 'middle_name': serializer.validated_data['middle_name'], 'last_name': serializer.validated_data['last_name']}}, status=status.HTTP_201_CREATED)
         return Response({'status': 'failed', 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     
 class CheckToken(generics.GenericAPIView):
