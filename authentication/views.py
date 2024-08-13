@@ -192,7 +192,7 @@ class LoginAccountUser(generics.GenericAPIView):
 class VerifyAccountUser(generics.GenericAPIView):
     def post(self, request, user_id):
         code = request.data.get('code')
-        user_code = db.otp_codes.find_one({'user_id': ObjectId(user_id)})
+        user_code = db.otp_codes.find_one({'user_id': user_id})
         
         if not user_code:
             return Response({'status': 'failed', 'error': 'code has expired'}, status=status.HTTP_400_BAD_REQUEST)
@@ -200,7 +200,7 @@ class VerifyAccountUser(generics.GenericAPIView):
             return Response({'status': 'failed', 'error': 'code is incorrect'}, status=status.HTTP_400_BAD_REQUEST)
         else:
             db.account_user.update_one({'_id': ObjectId(user_id)}, {'$set': {'is_verified': True}})
-            return Response({'status': 'success', 'message': 'Code is verified'}, status=status.HTTP_200_OK)
+            return BaseResponse.response(status=True, message='Code is verified', HTTP_STATUS=status.HTTP_200_OK)
         
 class GenerateOTPCode(generics.GenericAPIView):
     def get(self, request, user_id, no_otp):
@@ -214,13 +214,13 @@ class GenerateOTPCode(generics.GenericAPIView):
             'body': f'Use this otp to verify your account {code}'
         }
         Util.email_send(data)
-        return BaseResponse.response(status=True, message='otp has been swent to your email', HTTP_STATUS=status.HTTP_200_OK)
+        return BaseResponse.response(status=True, message='otp has been sent to your email', HTTP_STATUS=status.HTTP_200_OK)
 
 
 class PasswordResetView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = PasswordResetSerializer
-    def post(self, request):
+    def patch(self, request):
         user = request.user
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
@@ -237,23 +237,23 @@ class PasswordResetView(generics.GenericAPIView):
 
 class SuspendAccountUser(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
-    def post(self, request, acc_id):
-        account_user = db.account_user.find_one({'_id': ObjectId(acc_id)})
+    def patch(self, request, acc_id):
+        account_user = db.account_user.find_one({'_id': acc_id})
         if account_user['is_suspended'] == True:
             update = {'$set': {'is_suspended': False, 'status': 'Active'}}
-            db.account_user.update_one({'_id': ObjectId(acc_id)}, update)
-            return BaseResponse.response(status=True, message='Account is active', data=None, HTTP_STATUS=status.HTTP_200_OK)
+            db.account_user.update_one({'_id': acc_id}, update)
+            return BaseResponse.response(status=True, message='Account is active', HTTP_STATUS=status.HTTP_200_OK)
 
         update = {'$set': {'is_suspended': True, 'status': 'Suspended'}}
-        db.account_user.update_one({'_id': ObjectId(acc_id)}, update)
-        return BaseResponse.response(status=True, message='Account is suspended', data=None, HTTP_STATUS=status.HTTP_200_OK)
+        db.account_user.update_one({'_id': acc_id}, update)
+        return BaseResponse.response(status=True, message='Account is suspended', HTTP_STATUS=status.HTTP_200_OK)
         
 
 class ApproveAccountUser(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
-    def post(self, request, acc_id):
+    def patch(self, request, acc_id):
         update = {'$set': {'is_approved': True}}
-        db.account_user.update_one({'_id': ObjectId(acc_id)}, update)
+        db.account_user.update_one({'_id': acc_id}, update)
         return BaseResponse.response(status=True, message='Account is approved', HTTP_STATUS=status.HTTP_200_OK)
     
 
