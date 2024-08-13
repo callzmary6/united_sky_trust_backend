@@ -3,12 +3,11 @@ from datetime import datetime, timedelta
 from rest_framework import generics, status
 from rest_framework.response import Response
 
-from authentication.authentications import JWTAuthentication
 from authentication.permissions import IsAuthenticated
 from authentication.utils import Util
 from account_manager import utils
 
-from .serializers import TransferSerializer, VirtualCardSerializer, FundVirtualCardSerializer
+from .serializers import TransferSerializer, VirtualCardSerializer, FundVirtualCardSerializer, SupportTicketSerializer
 from .utils import Util as user_util
 
 from django.conf import settings
@@ -60,6 +59,33 @@ class GetTransactions(generics.GenericAPIView):
             },
         }, status=responses['success'])
     
+class GetPercentageExpenses(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user
+        account_user_transactions = db.transactions.find({'account_user_id': user['_id']})
+
+        transactions = list(account_user_transactions)
+        total_expenses = len(transactions)
+        total_debit = 0
+        total_credit = 0
+
+        for transaction in transactions:
+            if transaction['type'].lower() == 'credit':
+                total_credit += 1
+            if transaction['type'].lower() == 'debit':
+                total_debit += 1
+
+        percentage_credit = float((total_credit / total_expenses) * 100)
+        percentage_debit = float((total_debit / total_expenses) * 100)
+
+        return Response({
+            'status': 'success',
+            'percentage_credit': percentage_credit,
+            'percentage_debit': percentage_debit,
+        }, status=responses['success'])
+
+    
 class VerifyCOTCode(generics.GenericAPIView):
     def post(self, request):
         user_id = request.user['_id']
@@ -72,8 +98,7 @@ class VerifyCOTCode(generics.GenericAPIView):
             return Response({'status': 'success', 'message': 'cot code verified successfully!'}, status=responses['success'])
         else:
             return Response({'status': 'failed', 'error': 'cot vode is not correct'}, status=responses['failed'])
-        
-        
+              
 class VerifyIMFCode(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
@@ -338,6 +363,26 @@ class GetVirtualCards(generics.GenericAPIView):
         total_cards = len(virtual_cards)
 
         return Response({'status': 'success', 'virtual_cards': virtual_cards, 'total_virtual_cards': total_cards}, status=responses['success'])
+    
+class SupportTicketView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = SupportTicketSerializer
+
+    def post(self, request):
+        user = request.user
+        data = request.data
+        
+        serializer = self.serializer_class(data=data)
+        serializer.is_valid(raise_exception=True)
+
+        serializer.validated_data['account_user_id'] = user['_id']
+        serializer.validated_data['account_manager_id'] = user['account_manager_id']
+        serializer.save()
+
+        return Response({'status': 'success', 'message': 'support ticket created'}, status=responses['success'])
+                
+
+
 
 
 

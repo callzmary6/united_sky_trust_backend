@@ -72,5 +72,26 @@ class FundVirtualCardSerializer(serializers.Serializer):
     _id = serializers.UUIDField(default=uuid.uuid4().hex[:24])
     amount = serializers.FloatField()
     security_answer = serializers.CharField()
+
+class SupportTicketSerializer(serializers.Serializer):
+    _id = serializers.UUIDField(default=uuid.uuid4().hex[:24])
+    account_user_id = serializers.UUIDField(read_only=True)
+    account_manager_id = serializers.UUIDField(read_only=True)
+    department = serializers.CharField()
+    complaints = serializers.CharField()
+    ticket_id = serializers.CharField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+
+    def create(self, validated_data):
+        validated_data['ticket_id'] = user_util.generate_ticket_id()
+        validated_data['created_at'] = datetime.now()
+        return db.support_ticket.insert_one(validated_data)
+    
+
+class CommentSerializer(serializers.Serializer):
+    _id = serializers.UUIDField(default=uuid.uuid4().hex[:24])
+    support_ticket_id = serializers.UUIDField()
+        
+
     
         

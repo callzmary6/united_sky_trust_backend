@@ -1,8 +1,9 @@
 from django.urls import path
-from .views import GetTransactions, VerifyCOTCode, VerifyIMFCode, OTPVerifyView, TransferFundsView,   CheckAccountBalance, GetUserTransactions, VirtualCardRequest, FundVirtualCard, GetVirtualCards
+from .views import GetTransactions, VerifyCOTCode, VerifyIMFCode, OTPVerifyView, TransferFundsView,   CheckAccountBalance, GetUserTransactions, VirtualCardRequest, FundVirtualCard, GetVirtualCards,GetPercentageExpenses, SupportTicketView
 
 urlpatterns = [
     path('get_transactions', GetTransactions.as_view(), name='transactions'),
+    path('percentage_expense', GetPercentageExpenses.as_view(), name='percentage-expense'),
     path('verify_imf', VerifyIMFCode.as_view(), name='verify-imf'),
     path('verify_cot', VerifyCOTCode.as_view(), name='verify-cot'),
     path('verify_otp', OTPVerifyView.as_view(), name='verify-otp'),
@@ -12,4 +13,6 @@ urlpatterns = [
     path('request_virtual_card', VirtualCardRequest.as_view(), name='request-virtual-card'),
     path('fund_virtual_card/<str:vc_id>', FundVirtualCard.as_view(), name='fund-virtual-card'),
     path('virtual_cards', GetVirtualCards.as_view(), name='get-virtual-cards'), 
+
+    path('create_support_ticket', SupportTicketView.as_view(), name='create-support-ticket'),
 ]
