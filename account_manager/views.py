@@ -43,11 +43,11 @@ class GetRegisteredUsers(generics.GenericAPIView):
                 {'account_balance': search_regex},
             ]
         
-        users = db.account_user.find(query, {'full_name': 1, 'email': 1, 'account_balance': 1, 'account_number': 1, 'is_verified': 1, 'date_created': 1, 'status': 1})
+        users = db.account_user.find(query, {'full_name': 1, 'email': 1, 'account_balance': 1, 'account_number': 1, 'isVerified': 1, 'createdAt': 1, 'status': 1})
 
         total_users = db.account_user.count_documents(query)
 
-        sorted_users = sorted(users, key=lambda x: x['date_created'], reverse=True)
+        sorted_users = sorted(users, key=lambda x: x['createdAt'], reverse=True)
 
         paginator = Paginator(list(sorted_users), entry)
         page_obj = paginator.get_page(page)
@@ -70,7 +70,7 @@ class GetUserDetail(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     def get(self, request, id):
         account_manager = request.user
-        except_fields = {'password': 0, 'is_verified_cot': 0, 'is_verified_imf': 0, 'is_verified_otp': 0, 'is_authenticated': 0}
+        except_fields = {'password': 0, 'is_verified_cot': 0, 'is_verified_imf': 0, 'is_verified_otp': 0, 'is_authenticated': 0, 'full_name': 0}
         account_user = db.account_user.find_one({'_id': id, 'account_manager_id': account_manager['_id']}, except_fields)
         if account_user is None:
             return BaseResponse.response(status=False, message='User does not exist!', HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
