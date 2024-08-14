@@ -20,7 +20,7 @@ class TransactionSerializer(serializers.Serializer):
     description = serializers.CharField()
     frequency = serializers.IntegerField(default=1)
     status = serializers.CharField(read_only=True)
-    created_at = serializers.DateTimeField(read_only=True)
+    createdAt = serializers.DateTimeField(read_only=True)
 
     def create(self, validated_data):
         validated_data['ref_number'] = Util.generate_code()

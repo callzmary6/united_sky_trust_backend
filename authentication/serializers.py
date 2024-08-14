@@ -19,7 +19,7 @@ class AccountManagerSerializer(serializers.Serializer):
     is_admin = serializers.CharField(default=True)
     role = serializers.CharField(read_only=True)
     is_authenticated = serializers.CharField(default=True)
-    created_at = serializers.DateTimeField(read_only=True)
+    createdAt = serializers.DateTimeField(read_only=True)
 
     def create(self, validated_data):
         validated_data['created_at'] = datetime.now()
@@ -62,7 +62,6 @@ class AccountUserSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=64)
     middle_name = serializers.CharField(max_length=64)
     last_name = serializers.CharField(max_length=64)
-    fullname = serializers.CharField(read_only=True)
     country = serializers.CharField()
     state = serializers.CharField()
     city = serializers.CharField()
@@ -79,13 +78,12 @@ class AccountUserSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
     password2 = serializers.CharField(write_only=True)
     is_authenticated = serializers.CharField(default=True)
-    date_created = serializers.CharField(read_only=True)
-    status = serializers.CharField(default='Active')
-    is_verified = serializers.BooleanField(default=False)
+    createdAt = serializers.CharField(read_only=True)
+    isVerified = serializers.BooleanField(default=False)
     # is_approved = serializers.BooleanField(default=False)
     is_two_factor = serializers.BooleanField(default=False)
-    is_suspended = serializers.BooleanField(default=False)
-    is_transfer_blocked = serializers.BooleanField(default=False)
+    isSuspended = serializers.BooleanField(default=False)
+    isTransferBlocked = serializers.BooleanField(default=True)
     occupation = serializers.CharField()
     annual_income_range = serializers.CharField()
     ssn = serializers.CharField()
@@ -112,8 +110,7 @@ class AccountUserSerializer(serializers.Serializer):
         validated_data.pop('password2')
         validated_data['account_number'] = Util.generate_number(11)
         validated_data['two_factor_pin'] = Util.generate_number(4)
-        validated_data['date_created'] = datetime.now()
-        validated_data['full_name'] = f"{validated_data['first_name']} {validated_data['middle_name']} {validated_data['last_name']}"
+        validated_data['createdAt'] = datetime.now()
         validated_data['role'] = 'User'
 
         if db.account_user.find_one({'email': email}):
