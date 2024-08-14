@@ -17,9 +17,13 @@ class AccountManagerSerializer(serializers.Serializer):
     phone_number = serializers.CharField(max_length=20)
     password = serializers.CharField(write_only=True)
     is_admin = serializers.CharField(default=True)
+    role = serializers.CharField(read_only=True)
     is_authenticated = serializers.CharField(default=True)
+    created_at = serializers.DateTimeField(read_only=True)
 
     def create(self, validated_data):
+        validated_data['created_at'] = datetime.now()
+        validated_data['role'] = 'Admin'
         account_manager = db.account_user.insert_one(validated_data)
         return account_manager
     
@@ -86,6 +90,7 @@ class AccountUserSerializer(serializers.Serializer):
     annual_income_range = serializers.CharField()
     ssn = serializers.CharField()
     is_admin = serializers.BooleanField(default=False)
+    role = serializers.CharField(read_only=True)
     profile_picture = serializers.URLField(read_only=True)
     is_verified_cot = serializers.BooleanField(default=False)
     is_verified_imf = serializers.BooleanField(default=False)
@@ -109,6 +114,7 @@ class AccountUserSerializer(serializers.Serializer):
         validated_data['two_factor_pin'] = Util.generate_number(4)
         validated_data['date_created'] = datetime.now()
         validated_data['full_name'] = f"{validated_data['first_name']} {validated_data['middle_name']} {validated_data['last_name']}"
+        validated_data['role'] = 'User'
 
         if db.account_user.find_one({'email': email}):
             raise serializers.ValidationError({'error': {'email': 'Email is already in use!'}})

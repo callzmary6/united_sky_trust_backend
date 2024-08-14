@@ -51,7 +51,8 @@ class JWTAuthentication(authentication.BaseAuthentication):
             'user_identifier': user['email'],
             'exp': datetime.now() + timedelta(days=5),
             'iat': datetime.now().timestamp(),
-            'id': str(user['_id']),
+            'id': user['_id'],
+            'is_admin': user['is_admin']
         }
 
         # encode the jwt token with the secret key

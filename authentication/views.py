@@ -45,8 +45,12 @@ class CheckToken(generics.GenericAPIView):
     def get(self, request, token):
 
         try:
-            jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            return BaseResponse.response(status=True, message='token is valid', HTTP_STATUS=status.HTTP_200_OK)
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            user_data = db.account_user.find_one({'_id': payload['id']})
+            data = {
+                'is_admin': user_data['is_admin']
+            }
+            return BaseResponse.response(status=True, message='token is valid', data=data, HTTP_STATUS=status.HTTP_200_OK)
         except Exception as e:
             return BaseResponse.response(status=False, message=str(e), HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
     
@@ -90,7 +94,9 @@ class LoginAccountManager(generics.GenericAPIView):
                 'email': user['email'],
                 'first_name': user['first_name'],
                 'middle_name': user['middle_name'],
-                'last_name': user['last_name']
+                'last_name': user['last_name'],
+                'role': user['role'],
+                'created_at': user['created_at']
             }
         }
 
