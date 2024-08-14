@@ -29,8 +29,17 @@ class RegisterAccountManager(generics.GenericAPIView):
         serializer = AccountManagerSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response({'status': 'success', 'data': {'email': serializer.validated_data['email'], 'first_name': serializer.validated_data['first_name'], 'middle_name': serializer.validated_data['middle_name'], 'last_name': serializer.validated_data['last_name']}}, status=status.HTTP_201_CREATED)
-        return Response({'status': 'failed', 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+            data = {
+                'email': serializer.validated_data['email'],
+                'first_name': serializer.validated_data['first_name'],
+                'middle_name': serializer.validated_data['middle_name'],
+                'last_name': serializer.validated_data['last_name'] 
+            }
+
+            return BaseResponse.response(status=True, message='account created succesfully', data=data, HTTP_STATUS=status.HTTP_201_CREATED)
+        return BaseResponse.response(status=False, message=serializer.errors, HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
+        
     
 class CheckToken(generics.GenericAPIView):
     def get(self, request, token):
@@ -103,7 +112,7 @@ class CreateAccountUser(generics.GenericAPIView):
         profile_picture = request.data.get('profile_picture')
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
-            serializer.validated_data['account_manager_id'] = str(user['_id'])
+            serializer.validated_data['account_manager_id'] = user['_id']
             upload_result = upload(profile_picture)
             serializer.validated_data['profile_picture'] = upload_result['secure_url']
             user_data = serializer.save()
@@ -111,7 +120,7 @@ class CreateAccountUser(generics.GenericAPIView):
             # Email Functionality
             code = Util.generate_number(6)
             db.otp_codes.create_index('expireAt', expireAfterSeconds=120)
-            expire_at = datetime.utcnow() + timedelta(seconds=120)
+            expire_at = datetime.now() + timedelta(seconds=120)
             db.otp_codes.insert_one({'user_id': user_data['_id'], 'code': code, 'expireAt': expire_at})
             data = {
                 'subject': 'Email Confirmation',
@@ -120,8 +129,7 @@ class CreateAccountUser(generics.GenericAPIView):
             }
             Util.email_send(data)
 
-            return Response({
-                'status': 'success',
+            data = {
                 'user_data': {
                     '_id': user_data['_id'],
                     'email': user_data['email'],
@@ -129,8 +137,11 @@ class CreateAccountUser(generics.GenericAPIView):
                     'account_number': user_data['account_number'],
                     'profile_picture': user_data['profile_picture']
                 }
-            }, status=status.HTTP_201_CREATED)
-        return Response({'status': 'failed', 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+            }
+
+            return BaseResponse.response(status=True, message='account created successfully', data=data, HTTP_STATUS=status.HTTP_201_CREATED)
+
+        return BaseResponse.response(status=False, message=serializer.errors, HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
     
 
 class LoginAccountUser(generics.GenericAPIView):
@@ -139,10 +150,6 @@ class LoginAccountUser(generics.GenericAPIView):
         password = request.data.get('password')
 
         errors = {}
-        responses = {
-            'success': status.HTTP_200_OK,
-            'failed': status.HTTP_400_BAD_REQUEST
-        }
 
         if not account_id and not password:
             errors['account_id'] = 'Account_id should not be empty!'
@@ -153,12 +160,12 @@ class LoginAccountUser(generics.GenericAPIView):
             errors['password'] = 'Password should not be empty!'
 
         if errors:
-            return Response(errors, status=responses['failed'])
+            return BaseResponse.response(status=False, message=errors, HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
         
         account_user = db.account_user.find_one({'account_number': account_id, 'password': password})
 
         if not account_user:
-            return Response({'status': 'failed', 'error': 'Invalid Credentials!'}, status=responses['failed'])
+            return BaseResponse.response(status=False, message='Invalid Credentials!', HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
         
         if account_user['is_suspended'] == False:
 
@@ -172,21 +179,24 @@ class LoginAccountUser(generics.GenericAPIView):
                     'body': f'Use this otp to verify your login {two_factor_code}'
                 }
                 Util.email_send(data)
-                return Response({'status': 'success', 'message': 'check your email for 2fa code'}, status=responses['success'])
+                return BaseResponse.response(status=True, message='check your email for 2fa code', HTTP_STATUS=status.HTTP_201_CREATED)
 
             token = JWTAuthentication.create_jwt(account_user)
           
-            return Response({
-                'status': 'success',
+            return BaseResponse.response(
+                status=True,
+                data={
                 'token': token,
                 'user_data': {
                     'full_name': account_user['full_name'],
                     'account_balance': account_user['account_balance'],
                     'profile_picture': account_user['profile_picture'],
                     'account_type': account_user['account_type']
-                }
-            }, status=responses['success'])
-        return Response({'status': 'failed', 'error': 'Account is suspended'}, status=responses['failed'])
+                }},
+                message='account created successfully',
+                HTTP_STATUS=status.HTTP_201_CREATED
+                )
+        return BaseResponse.response(status=False, message='Account is suspended!', HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
 
 
 class VerifyAccountUser(generics.GenericAPIView):
@@ -226,13 +236,15 @@ class PasswordResetView(generics.GenericAPIView):
         if serializer.is_valid():
             account_user = db.account_user.find_one({'_id': user['_id']})
             if serializer.validated_data['old_password'] != account_user['password']:
-                return Response({'status': 'failed', 'error': 'Password is not correct!'}, status=status.HTTP_400_BAD_REQUEST)
+                return BaseResponse.response(status=False, message='Password is not correct!', HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
+
             if serializer.validated_data['new_password'] != serializer.validated_data['confirm_password']:
-                return Response({'status': 'failed', 'error': 'Passwords mismatch!'}, status=status.HTTP_400_BAD_REQUEST)
+                return BaseResponse.response(status=False, message='Passwords mismatch!', HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
             
             db.account_user.update_one({'_id': user['_id']}, {'$set': {'password': serializer.validated_data['new_password']}})
-            return Response({'status': 'success'}, status=status.HTTP_200_OK)
-        return Response({'status': 'failed', 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+            return BaseResponse.response(status=True, message='Password changed successfully', HTTP_STATUS=status.HTTP_200_OK)
+        return BaseResponse.response(status=False, message=serializer.errors, HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
+        
     
 
 class SuspendAccountUser(generics.GenericAPIView):
@@ -255,6 +267,20 @@ class ApproveAccountUser(generics.GenericAPIView):
         update = {'$set': {'is_approved': True}}
         db.account_user.update_one({'_id': acc_id}, update)
         return BaseResponse.response(status=True, message='Account is approved', HTTP_STATUS=status.HTTP_200_OK)
+    
+
+class TransferBlockView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def patch(self, request, acc_id):
+        account_user = db.account_user.find_one({'_id': acc_id})
+        if account_user['is_transfer_blocked'] == True:
+            update = {'$set': {'is_transfer_blocked': False}}
+            db.account_user.update_one({'_id': acc_id}, update)
+            return BaseResponse.response(status=True, message='Transfers has been blocled for this user', HTTP_STATUS=status.HTTP_200_OK)
+
+        update = {'$set': {'is_transfer_blocked': True}}
+        db.account_user.update_one({'_id': acc_id}, update)
+        return BaseResponse.response(status=True, message='This user can now transfer', HTTP_STATUS=status.HTTP_200_OK)
     
 
 class TwoFactorAuthentication(generics.GenericAPIView):

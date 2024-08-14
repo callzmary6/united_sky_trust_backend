@@ -78,9 +78,10 @@ class AccountUserSerializer(serializers.Serializer):
     date_created = serializers.CharField(read_only=True)
     status = serializers.CharField(default='Active')
     is_verified = serializers.BooleanField(default=False)
-    is_approved = serializers.BooleanField(default=False)
+    # is_approved = serializers.BooleanField(default=False)
     is_two_factor = serializers.BooleanField(default=False)
     is_suspended = serializers.BooleanField(default=False)
+    is_transfer_blocked = serializers.BooleanField(default=False)
     occupation = serializers.CharField()
     annual_income_range = serializers.CharField()
     ssn = serializers.CharField()
@@ -111,10 +112,11 @@ class AccountUserSerializer(serializers.Serializer):
 
         if db.account_user.find_one({'email': email}):
             raise serializers.ValidationError({'error': {'email': 'Email is already in use!'}})
+        
         if db.account_user.find_one({'phone_number': phone_number}):
             raise serializers.ValidationError({'error':{'phone_number': 'Phone number is already in use!'}})
         
-        account_user = db.account_user.insert_one(validated_data)
+        db.account_user.insert_one(validated_data)
         return validated_data
     
 class PasswordResetSerializer(serializers.Serializer):

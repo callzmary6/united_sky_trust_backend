@@ -66,6 +66,17 @@ class GetRegisteredUsers(generics.GenericAPIView):
             data=data
         )
     
+class GetUserDetail(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request, id):
+        account_manager = request.user
+        except_fields = {'password': 0, 'is_verified_cot': 0, 'is_verified_imf': 0, 'is_verified_otp': 0, 'is_authenticated': 0}
+        account_user = db.account_user.find_one({'_id': id, 'account_manager_id': account_manager['_id']}, except_fields)
+        if account_user is None:
+            return BaseResponse.response(status=False, message='User does not exist!', HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
+        return BaseResponse.response(status=True, data=account_user, HTTP_STATUS=status.HTTP_200_OK)
+        
+    
 class FundAccount(generics.GenericAPIView):
     permission_classes = [IsAuthenticated, ]
     serializer_class= TransactionSerializer
