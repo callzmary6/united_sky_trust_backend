@@ -51,7 +51,7 @@ class JWTAuthentication(authentication.BaseAuthentication):
             'user_identifier': user['email'],
             'exp': datetime.now() + timedelta(days=5),
             'iat': datetime.now().timestamp(),
-            'id': user['_id'],
+            'id': str(user['_id']),
             'is_admin': user['is_admin']
         }
 

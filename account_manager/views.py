@@ -29,12 +29,12 @@ class Transactions:
 class GetRegisteredUsers(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
-        user_id = str(request.user['_id'])
+        user_id = request.user['_id']
         entry = int(request.GET.get('entry', 10))
         page = int(request.GET.get('page', 1))
         search = request.GET.get('search', '')
 
-        query = {'account_manager_id': user_id}
+        query = {'account_manager_id': str(user_id)}
 
         if search:
             search_regex = re.compile(re.escape(search), re.IGNORECASE)
@@ -52,7 +52,13 @@ class GetRegisteredUsers(generics.GenericAPIView):
 
         sorted_users = sorted(users, key=lambda x: x['createdAt'], reverse=True)
 
-        paginator = Paginator(list(sorted_users), entry)
+        list_users = []
+        
+        for user in sorted_users:
+            user['_id'] = str(user['_id'])
+            list_users.append(user)
+
+        paginator = Paginator(list_users, entry)
         page_obj = paginator.get_page(page)
 
         new_users = list(page_obj)
@@ -74,9 +80,10 @@ class GetUserDetail(generics.GenericAPIView):
     def get(self, request, id):
         account_manager = request.user
         except_fields = {'password': 0, 'is_verified_cot': 0, 'is_verified_imf': 0, 'is_verified_otp': 0, 'is_authenticated': 0, 'full_name': 0}
-        account_user = db.account_user.find_one({'_id': ObjectId(id), 'account_manager_id': account_manager['_id']}, except_fields)
+        account_user = db.account_user.find_one({'_id': ObjectId(id), 'account_manager_id': str(account_manager['_id'])}, except_fields)
         if account_user is None:
             return BaseResponse.response(status=False, message='User does not exist!', HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
+        account_user['_id'] = str(account_user['_id'])
         return BaseResponse.response(status=True, data=account_user, HTTP_STATUS=status.HTTP_200_OK)
 
 

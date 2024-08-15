@@ -21,7 +21,7 @@ class AccountManagerSerializer(serializers.Serializer):
     createdAt = serializers.DateTimeField(read_only=True)
 
     def create(self, validated_data):
-        validated_data['created_at'] = datetime.now()
+        validated_data['createdAt'] = datetime.now()
         validated_data['role'] = 'Admin'
         account_manager = db.account_user.insert_one(validated_data)
         return account_manager

@@ -46,7 +46,7 @@ class CheckToken(generics.GenericAPIView):
 
         try:
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            user_data = db.account_user.find_one({'_id': payload['id']})
+            user_data = db.account_user.find_one({'_id': ObjectId(payload['id'])})
             data = {
                 'is_admin': user_data['is_admin']
             }
@@ -280,7 +280,7 @@ class TransferBlockView(generics.GenericAPIView):
         if account_user['isTransferBlocked'] == True:
             update = {'$set': {'isTransferBlocked': False}}
             db.account_user.update_one({'_id': ObjectId(acc_id)}, update)
-            return BaseResponse.response(status=True, message='Transfers has been blocled for this user', HTTP_STATUS=status.HTTP_200_OK)
+            return BaseResponse.response(status=True, message='Transfers has been blocked for this user', HTTP_STATUS=status.HTTP_200_OK)
 
         update = {'$set': {'isTransferBlocked': True}}
         db.account_user.update_one({'_id': ObjectId(acc_id)}, update)
