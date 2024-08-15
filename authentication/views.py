@@ -118,7 +118,7 @@ class CreateAccountUser(generics.GenericAPIView):
         profile_picture = request.data.get('profile_picture')
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
-            serializer.validated_data['account_manager_id'] = user['_id']
+            serializer.validated_data['account_manager_id'] = str(user['_id'])
             upload_result = upload(profile_picture)
             serializer.validated_data['profile_picture'] = upload_result['secure_url']
             user_data = serializer.save()
@@ -137,7 +137,6 @@ class CreateAccountUser(generics.GenericAPIView):
 
             data = {
                 'user_data': {
-                    '_id': user_data['_id'],
                     'email': user_data['email'],
                     'first_name': user_data['first_name'],
                     'account_number': user_data['account_number'],
@@ -255,14 +254,14 @@ class PasswordResetView(generics.GenericAPIView):
 class SuspendAccountUser(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     def patch(self, request, acc_id):
-        account_user = db.account_user.find_one({'_id': acc_id})
+        account_user = db.account_user.find_one({'_id': ObjectId(acc_id)})
         if account_user['isSuspended'] == True:
-            update = {'$set': {'isSuspended': False, 'status': 'Active'}}
-            db.account_user.update_one({'_id': acc_id}, update)
+            update = {'$set': {'isSuspended': False,}}
+            db.account_user.update_one({'_id': ObjectId(acc_id)}, update)
             return BaseResponse.response(status=True, message='Account is active', HTTP_STATUS=status.HTTP_200_OK)
 
-        update = {'$set': {'isSuspended': True, 'status': 'Suspended'}}
-        db.account_user.update_one({'_id': acc_id}, update)
+        update = {'$set': {'isSuspended': True}}
+        db.account_user.update_one({'_id': ObjectId(acc_id)}, update)
         return BaseResponse.response(status=True, message='Account is suspended', HTTP_STATUS=status.HTTP_200_OK)
         
 
@@ -270,21 +269,21 @@ class ApproveAccountUser(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     def patch(self, request, acc_id):
         update = {'$set': {'is_approved': True}}
-        db.account_user.update_one({'_id': acc_id}, update)
+        db.account_user.update_one({'_id': ObjectId(acc_id)}, update)
         return BaseResponse.response(status=True, message='Account is approved', HTTP_STATUS=status.HTTP_200_OK)
     
 
 class TransferBlockView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     def patch(self, request, acc_id):
-        account_user = db.account_user.find_one({'_id': acc_id})
+        account_user = db.account_user.find_one({'_id': ObjectId(acc_id)})
         if account_user['isTransferBlocked'] == True:
             update = {'$set': {'isTransferBlocked': False}}
-            db.account_user.update_one({'_id': acc_id}, update)
+            db.account_user.update_one({'_id': ObjectId(acc_id)}, update)
             return BaseResponse.response(status=True, message='Transfers has been blocled for this user', HTTP_STATUS=status.HTTP_200_OK)
 
         update = {'$set': {'isTransferBlocked': True}}
-        db.account_user.update_one({'_id': acc_id}, update)
+        db.account_user.update_one({'_id': ObjectId(acc_id)}, update)
         return BaseResponse.response(status=True, message='This user can now transfer', HTTP_STATUS=status.HTTP_200_OK)
     
 

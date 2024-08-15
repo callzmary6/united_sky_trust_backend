@@ -9,7 +9,6 @@ from datetime import datetime
 db = settings.DB
 
 class AccountManagerSerializer(serializers.Serializer):
-    _id = serializers.UUIDField(default=uuid.uuid4().hex[:24])
     email = serializers.EmailField(required=True)
     first_name = serializers.CharField(max_length=15)
     middle_name= serializers.CharField(max_length=20)
@@ -55,7 +54,6 @@ class LoginAccountUserSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
 class AccountUserSerializer(serializers.Serializer):
-    _id = serializers.UUIDField(default=uuid.uuid4().hex[:24])
     account_manager_id = serializers.CharField(read_only=True)
     email = serializers.EmailField()
     phone_number = serializers.CharField(max_length=20)

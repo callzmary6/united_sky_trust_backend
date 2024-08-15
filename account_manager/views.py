@@ -11,6 +11,7 @@ from django.core.paginator import Paginator
 import re
 import pymongo
 from pymongo import ReturnDocument
+from bson import ObjectId
 
 db = settings.DB
 client = settings.MONGO_CLIENT
@@ -73,7 +74,7 @@ class GetUserDetail(generics.GenericAPIView):
     def get(self, request, id):
         account_manager = request.user
         except_fields = {'password': 0, 'is_verified_cot': 0, 'is_verified_imf': 0, 'is_verified_otp': 0, 'is_authenticated': 0, 'full_name': 0}
-        account_user = db.account_user.find_one({'_id': id, 'account_manager_id': account_manager['_id']}, except_fields)
+        account_user = db.account_user.find_one({'_id': ObjectId(id), 'account_manager_id': account_manager['_id']}, except_fields)
         if account_user is None:
             return BaseResponse.response(status=False, message='User does not exist!', HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
         return BaseResponse.response(status=True, data=account_user, HTTP_STATUS=status.HTTP_200_OK)
@@ -157,7 +158,7 @@ class UpdateAccountProfile(generics.GenericAPIView):
         data = request.data
         serializer = AccountManagerSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        query = {'_id': request.user['_id']}
+        query = {'_id': ObjectId(request.user['_id'])}
         update_field = {'$set': serializer.validated_data}
         db.account_user.find_one_and_update(query, update_field, return_document=ReturnDocument.AFTER)
         return Response({'status': 'success'}, status=responses['success'])
