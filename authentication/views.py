@@ -193,7 +193,9 @@ class LoginAccountUser(generics.GenericAPIView):
                 data={
                 'token': token,
                 'user_data': {
-                    'full_name': account_user['full_name'],
+                    'first_name': account_user['first_name'],
+                    'middle_name': account_user['middle_name'],
+                    'last_name': account_user['last_name'],
                     'account_balance': account_user['account_balance'],
                     'profile_picture': account_user['profile_picture'],
                     'account_type': account_user['account_type']

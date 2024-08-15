@@ -108,7 +108,6 @@ class AccountUserSerializer(serializers.Serializer):
         validated_data.pop('password2')
         validated_data['account_number'] = Util.generate_number(11)
         validated_data['two_factor_pin'] = Util.generate_number(4)
-        validated_data['createdAt'] = datetime.now()
         validated_data['role'] = 'User'
 
         if db.account_user.find_one({'email': email}):

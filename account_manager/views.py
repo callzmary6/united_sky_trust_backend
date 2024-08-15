@@ -5,6 +5,7 @@ from authentication.permissions import IsAuthenticated
 from authentication.serializers import AccountManagerSerializer
 from .serializers import TransactionSerializer
 from united_sky_trust.base_response import BaseResponse
+from .utils import Util as manager_util
 
 from django.conf import settings
 from django.core.paginator import Paginator
@@ -12,6 +13,7 @@ import re
 import pymongo
 from pymongo import ReturnDocument
 from bson import ObjectId
+import datetime
 
 db = settings.DB
 client = settings.MONGO_CLIENT
@@ -94,7 +96,7 @@ class FundAccount(generics.GenericAPIView):
         user = request.user
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            account_user = db.account_user.find_one({'account_number': acn})
+            account_user = db.account_user.find_one({'account_number': acn, 'account_manager_id': str(user['_id'])})
             new_account_balance = account_user['account_balance']
             if serializer.validated_data['type'] == 'credit' or serializer.validated_data['type'] == 'Credit':
                 for i in range(serializer.validated_data['frequency']):
@@ -107,15 +109,33 @@ class FundAccount(generics.GenericAPIView):
 
             db.account_user.update_one({'account_number': acn}, {'$set':{'account_balance': new_account_balance}})
 
-            serializer.validated_data['account_user_id'] = str(account_user['_id'])
+            serializer.validated_data['transaction_user_id'] = str(account_user['_id'])
             serializer.validated_data['account_manager_id'] = str(user['_id'])
-            serializer.validated_data['account_holder'] = account_user['full_name']
+            serializer.validated_data['account_holder'] = f"{account_user['first_name']} {account_user['middle_name']} {account_user['last_name']}"
             serializer.validated_data['status'] = 'Completed'
+            serializer.validated_data['ref_number'] = manager_util.generate_code()
+            serializer.validated_data['createdAt'] = datetime.datetime.now()
             serializer.save()
+            
+            db.transactions.insert_one({
+                    'type': 'Credit',
+                    'amount': serializer.validated_data['amount'],
+                    'scope': 'Local Transfer',
+                    'description': serializer.validated_data['description'],
+                    'frequency': 1,
+                    'transaction_user_id': account_user['_id'],
+                    'account_manager_id': user['_id'],
+                    'account_holder': f"{account_user['first_name']} {account_user['middle_name']} {account_user['last_name']}",
+                    'account_number': acn,
+                    'status': 'Completed',
+                    'ref_number': serializer.validated_data['ref_number'],
+                    'created_at': serializer.validated_data['createdAt'],
+                    })
+
             # Send email functionality
 
-            return Response({'status': 'success', 'new_account_balance': new_account_balance}, status=status.HTTP_200_OK)
-        return Response({'status': 'failed', 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+            return BaseResponse.response(status=True, data={'new_account_balance': new_account_balance}, HTTP_STATUS=status.HTTP_200_OK)#
+        return BaseResponse.response(status=False, data=serializer.errors, HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
     
 
 class GetTransactions(generics.GenericAPIView):
@@ -141,11 +161,9 @@ class GetTransactions(generics.GenericAPIView):
                 {'status': search_regex},
             }
 
-        transactions = db.transactions.find(query, {'ref_number': 1, 'account_holder': 1, 'amount': 1, 'description': 1, 'type': 1, 'scope': 1, 'status': 1, 'created_at': 1})
+        sorted_transactions = db.transactions.find(query, {'ref_number': 1, 'account_holder': 1, 'amount': 1, 'description': 1, 'type': 1, 'scope': 1, 'status': 1, 'createdAt': 1}).sort('createdAt', pymongo.DESCENDING)
 
         total_transactions = db.transactions.count_documents(query)
-
-        sorted_transactions = sorted(transactions, key=lambda x: x['created_at'], reverse=True)
 
         # paginate the transactions
         paginator = Paginator(list(sorted_transactions), entry)
@@ -156,9 +174,14 @@ class GetTransactions(generics.GenericAPIView):
             transaction['_id'] = str(transaction['_id'])
             new_transactions.append(transaction)
 
-        return Response({'status': 'success', 'transactions': new_transactions, 'no_of_transactions': total_transactions, 'current_page': page}, status=status.HTTP_200_OK)
+        data = {
+            'transactions': new_transactions,
+            'no_of_transactions': total_transactions,
+            'current_page': page
+        }
 
-
+        return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
+    
 class UpdateAccountProfile(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     def put(self, request):

@@ -9,6 +9,7 @@ from account_manager import utils
 
 from .serializers import TransferSerializer, VirtualCardSerializer, FundVirtualCardSerializer, SupportTicketSerializer
 from .utils import Util as user_util
+from united_sky_trust.base_response import BaseResponse
 
 from django.conf import settings
 import uuid
@@ -251,14 +252,23 @@ class GetUserTransactions(generics.GenericAPIView):
     def get(self, request):
         user = request.user
 
-        query = {'account_user_id': user['_id']}
-        filter = {'ref_number': 1, 'amount': 1, 'status': 1, 'type': 1, 'description': 1, 'scope': 1, 'created_at': 1}
+        query = {'transaction_user_id': str(user['_id'])}
+        filter = {'_id': 1, 'ref_number': 1, 'amount': 1, 'status': 1, 'type': 1, 'description': 1, 'scope': 1, 'created_at': 1}
 
-        transaction_data = db.transactions.find(query, filter).sort('created_at', pymongo.DESCENDING)
+        sorted_transaction = db.transactions.find(query, filter).sort('created_at', pymongo.DESCENDING)
 
-        transactions = list(transaction_data)
+        list_transactions = []
 
-        return Response({'status': 'success', 'transactions': transactions, 'total_transactions': len(transactions)}, status=responses['success'])
+        for transaction in sorted_transaction:
+            transaction['_id']  = str(transaction['_id'])
+            list_transactions.append(transaction)
+
+        data = {
+            'transactions': list_transactions,
+            'total_transactions': len(list_transactions)
+        }
+
+        return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
     
 class VirtualCardRequest(generics.GenericAPIView):
     permission_classes = [IsAuthenticated, ]
