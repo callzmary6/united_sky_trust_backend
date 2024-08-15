@@ -133,7 +133,7 @@ class CreateAccountUser(generics.GenericAPIView):
                 'to': user_data['email'],
                 'body': f'Use this otp to verify your account {code}'
             }
-            Util.email_send(data)
+            # Util.email_send(data)
 
             data = {
                 'user_data': {

@@ -38,12 +38,14 @@ class GetRegisteredUsers(generics.GenericAPIView):
         if search:
             search_regex = re.compile(re.escape(search), re.IGNORECASE)
             query['$or'] = [
-                {'full_name': search_regex},
+                {'first_name': search_regex},
+                {'middle_name': search_regex},
+                {'last_name': search_regex},
                 {'account_number': search_regex},
                 {'account_balance': search_regex},
             ]
         
-        users = db.account_user.find(query, {'first_name': 1, 'middle_name': 1, 'last_name': 1, 'email': 1, 'account_balance': 1, 'account_number': 1, 'isVerified': 1, 'createdAt': 1, 'isSuspended': 1})
+        users = db.account_user.find(query, {'first_name': 1, 'middle_name': 1, 'last_name': 1, 'email': 1, 'account_balance': 1, 'account_number': 1, 'isVerified': 1, 'createdAt': 1, 'isSuspended': 1, 'isTransferBlocked': 1})
 
         total_users = db.account_user.count_documents(query)
 
@@ -75,8 +77,8 @@ class GetUserDetail(generics.GenericAPIView):
         if account_user is None:
             return BaseResponse.response(status=False, message='User does not exist!', HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
         return BaseResponse.response(status=True, data=account_user, HTTP_STATUS=status.HTTP_200_OK)
-        
-    
+
+
 class FundAccount(generics.GenericAPIView):
     permission_classes = [IsAuthenticated, ]
     serializer_class= TransactionSerializer
