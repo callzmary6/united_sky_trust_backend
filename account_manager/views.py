@@ -88,6 +88,29 @@ class GetUserDetail(generics.GenericAPIView):
         account_user['_id'] = str(account_user['_id'])
         return BaseResponse.response(status=True, data=account_user, HTTP_STATUS=status.HTTP_200_OK)
 
+class AccountUserTransactions(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated,]
+
+    def get(self, request, id):
+        user = request.user
+        query = {'transaction_user_id': id, 'account_manager_id': str(user['_id'])}
+        filter = {'_id': 1, 'ref_number': 1, 'amount': 1, 'status': 1, 'type': 1, 'description': 1, 'scope': 1, 'createdAt': 1}
+
+        sorted_transaction = db.transactions.find(query, filter).sort('createdAt', pymongo.DESCENDING)
+
+        list_transactions = []
+
+        for transaction in sorted_transaction:
+            transaction['_id']  = str(transaction['_id'])
+            list_transactions.append(transaction)
+
+        data = {
+            'transactions': list_transactions,
+            'total_transactions': len(list_transactions)
+        }
+
+        return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
+
 
 class FundAccount(generics.GenericAPIView):
     permission_classes = [IsAuthenticated, ]
@@ -129,7 +152,7 @@ class FundAccount(generics.GenericAPIView):
                     'account_number': acn,
                     'status': 'Completed',
                     'ref_number': serializer.validated_data['ref_number'],
-                    'created_at': serializer.validated_data['createdAt'],
+                    'createdAt': serializer.validated_data['createdAt'],
                     })
 
             # Send email functionality
@@ -202,7 +225,7 @@ class GetVirtualCards(generics.GenericAPIView):
 
         filter = {'card_holder_name': 1, 'card_type': 1, 'balance': 1, 'card_number': 1, 'cvv': 1, 'valid_through': 1, 'is_activated': 1}
 
-        virtual_cards_obj = db.virtual_cards.find(query, filter).sort('created_at', pymongo.DESCENDING)
+        virtual_cards_obj = db.virtual_cards.find(query, filter).sort('createdAt', pymongo.DESCENDING)
 
         virtual_cards = list(virtual_cards_obj)
 

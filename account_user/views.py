@@ -41,7 +41,7 @@ class GetTransactions(generics.GenericAPIView):
 
         transactions = db.transactions.find({'account_user_id': user['_id']})
 
-        sorted_transactions = sorted(transactions, key=lambda x: x['created_at'], reverse=True)
+        sorted_transactions = sorted(transactions, key=lambda x: x['createdAt'], reverse=True)
 
         for transaction in sorted_transactions:
             all_transactions.append(transaction)
@@ -179,7 +179,7 @@ class TransferFundsView(generics.GenericAPIView):
                     )
 
                     serializer.validated_data['ref_number'] = utils.Util.generate_code()
-                    serializer.validated_data['created_at'] = sender_result['last_balance_update_time']
+                    serializer.validated_data['createdAt'] = sender_result['last_balance_update_time']
 
                     # send debit email and sms functionality
                     
@@ -217,7 +217,7 @@ class TransferFundsView(generics.GenericAPIView):
                         'account_number': account_number,
                         'status': 'Completed',
                         'ref_number': serializer.validated_data['ref_number'],
-                        'created_at': serializer.validated_data['created_at'],
+                        'createdAt': serializer.validated_data['createdAt'],
                         # 'bank_name': serializer.validated_data['bank_name'],
                         'bank_routing_number': serializer.validated_data['bank_routing_number'],
                         'beneficiary_account_holder': receiver_result['full_name']
@@ -238,7 +238,7 @@ class TransferFundsView(generics.GenericAPIView):
                         # 'bank_name': '',
                         'status': 'Completed',
                         'ref_number': serializer.validated_data['ref_number'],
-                        'created_at': serializer.validated_data['created_at']
+                        'createdAt': serializer.validated_data['createdAt']
                     }, session=session)
 
             return Response({'status': 'success', 'message': 'Transaction Successful'}, status=responses['success'])
@@ -253,9 +253,9 @@ class GetUserTransactions(generics.GenericAPIView):
         user = request.user
 
         query = {'transaction_user_id': str(user['_id'])}
-        filter = {'_id': 1, 'ref_number': 1, 'amount': 1, 'status': 1, 'type': 1, 'description': 1, 'scope': 1, 'created_at': 1}
+        filter = {'_id': 1, 'ref_number': 1, 'amount': 1, 'status': 1, 'type': 1, 'description': 1, 'scope': 1, 'createdAt': 1}
 
-        sorted_transaction = db.transactions.find(query, filter).sort('created_at', pymongo.DESCENDING)
+        sorted_transaction = db.transactions.find(query, filter).sort('createdAt', pymongo.DESCENDING)
 
         list_transactions = []
 
@@ -355,7 +355,7 @@ class FundVirtualCard(generics.GenericAPIView):
                         'account_number': user['account_number'],
                         'status': 'Completed',
                         'ref_number': ref_number,
-                        'created_at': virtual_card_update['last_fund_time'],
+                        'createdAt': virtual_card_update['last_fund_time'],
                     }, session=session)
 
                     return Response({'status': 'success', 'updated_balance': virtual_card_update['balance']}, status=responses['success'])
@@ -367,7 +367,7 @@ class GetVirtualCards(generics.GenericAPIView):
     def get(self, request):
         user = request.user
 
-        virtual_cards_data = db.virtual_cards.find({'account_user_id': user['_id']}, {'security_question': 0, 'answer': 0, 'account_user_id': 0, 'account_manager_id': 0, 'last_fund_time': 0}).sort('created_at', pymongo.DESCENDING)
+        virtual_cards_data = db.virtual_cards.find({'account_user_id': user['_id']}, {'security_question': 0, 'answer': 0, 'account_user_id': 0, 'account_manager_id': 0, 'last_fund_time': 0}).sort('createdAt', pymongo.DESCENDING)
 
         virtual_cards = list(virtual_cards_data)
         total_cards = len(virtual_cards)
