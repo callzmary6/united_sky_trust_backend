@@ -155,7 +155,7 @@ class GetTransactions(generics.GenericAPIView):
 
         if search:
             search_regex = re.compile(re.escape(search), re.IGNORECASE)
-            query['$or'] = {
+            query['$or'] = [
                 {'ref_number': search_regex},
                 {'account_holder': search_regex},
                 {'amount': search_regex},
@@ -163,7 +163,7 @@ class GetTransactions(generics.GenericAPIView):
                 {'type': search_regex},
                 {'scope': search_regex},
                 {'status': search_regex},
-            }
+            ]
 
         sorted_transactions = db.transactions.find(query, {'ref_number': 1, 'account_holder': 1, 'amount': 1, 'description': 1, 'type': 1, 'scope': 1, 'status': 1, 'createdAt': 1}).sort('createdAt', pymongo.DESCENDING)
 
@@ -199,7 +199,7 @@ class AccountUserTransactions(generics.GenericAPIView):
 
         if search:
             search_regex = re.compile(re.escape(search), re.IGNORECASE)
-            query['$or'] = {
+            query['$or'] = [
                 {'ref_number': search_regex},
                 {'account_holder': search_regex},
                 {'amount': search_regex},
@@ -207,7 +207,7 @@ class AccountUserTransactions(generics.GenericAPIView):
                 {'type': search_regex},
                 {'scope': search_regex},
                 {'status': search_regex},
-            }
+            ]
 
         sorted_transactions = db.transactions.find(query, {'ref_number': 1, 'account_holder': 1, 'amount': 1, 'description': 1, 'type': 1, 'scope': 1, 'account_currency': 1, 'status': 1, 'createdAt': 1}).sort('createdAt', pymongo.DESCENDING)
 
