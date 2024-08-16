@@ -235,8 +235,20 @@ class UpdateTransactionView(generics.GenericAPIView):
     serializer_class = TransactionSerializer
 
     def patch(self, request, id):
-        pass
-    
+        user = request.user
+        serializer = self.serializer_class(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        query = {'_id': ObjectId(id), 'account_manager_id': str(user['_id'])}
+        update_fields = {'$set': serializer.validated_data}
+        try:
+            updated_transaction = db.transactions.find_one_and_update(query, update_fields, return_document=ReturnDocument.AFTER)
+            if updated_transaction==None:
+                return BaseResponse.response(status=False, message='Transaction does not exist!', HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
+            return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
+        except Exception as e:
+            return BaseResponse.response(status=False, data=str(e), HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
+        
+
 class DeleteTransaction(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     def delete(self, request, id):

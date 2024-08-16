@@ -23,6 +23,5 @@ class TransactionSerializer(serializers.Serializer):
     createdAt = serializers.DateTimeField(read_only=True)
 
     def create(self, validated_data):
-        validated_data['created_at'] = datetime.now()
         db.transactions.insert_one(validated_data)
         return validated_data
