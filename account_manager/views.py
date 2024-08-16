@@ -229,6 +229,20 @@ class AccountUserTransactions(generics.GenericAPIView):
         }
 
         return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
+
+class UpdateTransactionView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated,]
+    serializer_class = TransactionSerializer
+
+    def patch(self, request, id):
+        pass
+    
+class DeleteTransaction(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def delete(self, request, id):
+        user = request.user
+        db.transactions.delete_one({'_id': ObjectId(id), 'account_manager_id': str(user['_id'])})
+        return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_204_NO_CONTENT)
     
 class UpdateAccountProfile(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
