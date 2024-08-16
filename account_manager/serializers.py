@@ -19,6 +19,7 @@ class TransactionSerializer(serializers.Serializer):
     description = serializers.CharField()
     frequency = serializers.IntegerField(default=1)
     status = serializers.CharField(read_only=True)
+    account_currency = serializers.CharField(read_only=True)
     createdAt = serializers.DateTimeField(read_only=True)
 
     def create(self, validated_data):

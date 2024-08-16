@@ -88,28 +88,7 @@ class GetUserDetail(generics.GenericAPIView):
         account_user['_id'] = str(account_user['_id'])
         return BaseResponse.response(status=True, data=account_user, HTTP_STATUS=status.HTTP_200_OK)
 
-class AccountUserTransactions(generics.GenericAPIView):
-    permission_classes = [IsAuthenticated,]
 
-    def get(self, request, id):
-        user = request.user
-        query = {'transaction_user_id': id, 'account_manager_id': str(user['_id'])}
-        filter = {'_id': 1, 'ref_number': 1, 'amount': 1, 'status': 1, 'type': 1, 'description': 1, 'scope': 1, 'createdAt': 1}
-
-        sorted_transaction = db.transactions.find(query, filter).sort('createdAt', pymongo.DESCENDING)
-
-        list_transactions = []
-
-        for transaction in sorted_transaction:
-            transaction['_id']  = str(transaction['_id'])
-            list_transactions.append(transaction)
-
-        data = {
-            'transactions': list_transactions,
-            'total_transactions': len(list_transactions)
-        }
-
-        return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
 
 
 class FundAccount(generics.GenericAPIView):
@@ -136,6 +115,7 @@ class FundAccount(generics.GenericAPIView):
             serializer.validated_data['account_manager_id'] = str(user['_id'])
             serializer.validated_data['account_holder'] = f"{account_user['first_name']} {account_user['middle_name']} {account_user['last_name']}"
             serializer.validated_data['status'] = 'Completed'
+            serializer.validated_data['account_currency'] = account_user['account_currency']
             serializer.validated_data['ref_number'] = manager_util.generate_code()
             serializer.validated_data['createdAt'] = datetime.datetime.now()
             serializer.save()
@@ -149,6 +129,7 @@ class FundAccount(generics.GenericAPIView):
                     'transaction_user_id': account_user['_id'],
                     'account_manager_id': user['_id'],
                     'account_holder': f"{account_user['first_name']} {account_user['middle_name']} {account_user['last_name']}",
+                    'account_currency': serializer.validated_data['account_currency'],
                     'account_number': acn,
                     'status': 'Completed',
                     'ref_number': serializer.validated_data['ref_number'],
@@ -185,6 +166,50 @@ class GetTransactions(generics.GenericAPIView):
             }
 
         sorted_transactions = db.transactions.find(query, {'ref_number': 1, 'account_holder': 1, 'amount': 1, 'description': 1, 'type': 1, 'scope': 1, 'status': 1, 'createdAt': 1}).sort('createdAt', pymongo.DESCENDING)
+
+        total_transactions = db.transactions.count_documents(query)
+
+        # paginate the transactions
+        paginator = Paginator(list(sorted_transactions), entry)
+        transactions_per_page = paginator.get_page(page)
+
+        new_transactions = []
+        for transaction in transactions_per_page:
+            transaction['_id'] = str(transaction['_id'])
+            new_transactions.append(transaction)
+
+        data = {
+            'transactions': new_transactions,
+            'no_of_transactions': total_transactions,
+            'current_page': page
+        }
+
+        return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
+    
+class AccountUserTransactions(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated,]
+    def get(self, request, id):
+        user = request.user
+        entry = int(request.GET.get('entry', 10))
+        page = int(request.GET.get('page', 1))
+        search = request.GET.get('search', '')
+        user_id = str(user['_id'])
+
+        query = {'transaction_user_id': id, 'account_manager_id': user_id}
+
+        if search:
+            search_regex = re.compile(re.escape(search), re.IGNORECASE)
+            query['$or'] = {
+                {'ref_number': search_regex},
+                {'account_holder': search_regex},
+                {'amount': search_regex},
+                {'description': search_regex},
+                {'type': search_regex},
+                {'scope': search_regex},
+                {'status': search_regex},
+            }
+
+        sorted_transactions = db.transactions.find(query, {'ref_number': 1, 'account_holder': 1, 'amount': 1, 'description': 1, 'type': 1, 'scope': 1, 'account_currency': 1, 'status': 1, 'createdAt': 1}).sort('createdAt', pymongo.DESCENDING)
 
         total_transactions = db.transactions.count_documents(query)
 
