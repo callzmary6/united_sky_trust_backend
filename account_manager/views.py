@@ -238,7 +238,7 @@ class UpdateTransactionView(generics.GenericAPIView):
         user = request.user
         serializer = self.serializer_class(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        query = {'_id': ObjectId(id), 'account_manager_id': str(user['_id'])}
+        query = {'_id': ObjectId(id), 'account_manager_id': user['_id']}
         update_fields = {'$set': serializer.validated_data}
         try:
             updated_transaction = db.transactions.find_one_and_update(query, update_fields, return_document=ReturnDocument.AFTER)
@@ -253,7 +253,7 @@ class DeleteTransaction(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     def delete(self, request, id):
         user = request.user
-        db.transactions.delete_one({'_id': ObjectId(id), 'account_manager_id': str(user['_id'])})
+        db.transactions.delete_one({'_id': ObjectId(id), 'account_manager_id': user['_id']})
         return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
     
 class UpdateAccountProfile(generics.GenericAPIView):

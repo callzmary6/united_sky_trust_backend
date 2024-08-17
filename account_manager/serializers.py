@@ -18,7 +18,7 @@ class TransactionSerializer(serializers.Serializer):
     scope = serializers.CharField()
     description = serializers.CharField()
     frequency = serializers.IntegerField(default=1)
-    status = serializers.CharField(read_only=True)
+    status = serializers.CharField()
     account_currency = serializers.CharField(read_only=True)
     createdAt = serializers.DateTimeField(read_only=True)
 
