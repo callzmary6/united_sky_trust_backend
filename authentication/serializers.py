@@ -56,7 +56,7 @@ class LoginAccountUserSerializer(serializers.Serializer):
 class AccountUserSerializer(serializers.Serializer):
     account_manager_id = serializers.CharField(read_only=True)
     email = serializers.EmailField()
-    phone_number = serializers.CharField(max_length=20)
+    phone_number = serializers.CharField()
     first_name = serializers.CharField()
     middle_name = serializers.CharField()
     last_name = serializers.CharField()
@@ -69,7 +69,7 @@ class AccountUserSerializer(serializers.Serializer):
     account_number = serializers.CharField(read_only=True)
     account_type = serializers.CharField()
     account_currency = serializers.CharField()
-    account_balance = serializers.DecimalField(default=0.00, decimal_places=2, max_digits=12)
+    account_balance = serializers.FloatField()
     imf_code = serializers.CharField()
     cot_code = serializers.CharField()
     two_factor_pin = serializers.CharField(read_only=True)
