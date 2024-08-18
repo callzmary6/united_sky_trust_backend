@@ -7,11 +7,12 @@ from authentication.permissions import IsAuthenticated
 from authentication.utils import Util
 from account_manager import utils
 
-from .serializers import TransferSerializer, VirtualCardSerializer, FundVirtualCardSerializer, SupportTicketSerializer
+from .serializers import TransferSerializer, VirtualCardSerializer, FundVirtualCardSerializer, SupportTicketSerializer, ChequeDepositSerializer
 from .utils import Util as user_util
 from united_sky_trust.base_response import BaseResponse
 
 from django.conf import settings
+from cloudinary.uploader import upload
 import uuid
 import pymongo
 import datetime
@@ -280,33 +281,32 @@ class VirtualCardRequest(generics.GenericAPIView):
 
         # use sessions here
 
-        serializer.validated_data['account_user_id'] = user['_id']
+        serializer.validated_data['virtualcard_user_id'] = user['_id']
         serializer.validated_data['account_manager_id'] = account_manager['_id']
-        serializer.validated_data['card_holder_name'] = user['full_name']
+        serializer.validated_data['card_holder_name'] = f"{user['first_name']} {user['middle_name']} {user['last_name']}"
         virtual_card_data = serializer.save()
 
         virtual_card = db.virtual_cards.find_one({'_id': virtual_card_data.inserted_id})
         
 
-        db.security_questions.insert_one({
-        '_id': uuid.uuid4().hex[:24],
-        'question': virtual_card['security_question'],
-        'answer': virtual_card['answer'],
-        'account_user_id': virtual_card['_id'],
-        'account_manager_id': virtual_card['account_manager_id']
-        })
+        # db.security_questions.insert_one({
+        # '_id': uuid.uuid4().hex[:24],
+        # 'question': virtual_card['security_question'],
+        # 'answer': virtual_card['answer'],
+        # 'account_user_id': virtual_card['_id'],
+        # 'account_manager_id': virtual_card['account_manager_id']
+        # })
 
-        return Response({
-            'status': 'success',
+        data = {
             'card_type': virtual_card['card_type'],
             'card_number': virtual_card['card_number'],
             'valid_through': virtual_card['valid_through'],
             'cvv': virtual_card['cvv'],
             'balance': virtual_card['balance'],
-            'is_active': virtual_card['is_activated']
-            },
-            status=responses['success']
-            )
+            'status': virtual_card['status']
+        }
+
+        return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
 
 class FundVirtualCard(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
@@ -390,7 +390,29 @@ class SupportTicketView(generics.GenericAPIView):
         serializer.save()
 
         return Response({'status': 'success', 'message': 'support ticket created'}, status=responses['success'])
-                
+    
+class CheckDepositRequest(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ChequeDepositSerializer
+    def post(self, request):
+        user = request.user
+        account_manager = AccountManager.get_account_manager()
+        data = request.data
+
+        serializer = self.serializer_class(data=data)
+        serializer.is_valid(raise_exception=True)
+        front_cheque_data = upload(serializer.validated_data['front_cheque'])
+        back_cheque_data = upload()
+        serializer.validated_data['account_holder'] = f"{user['first_name']} {user['middle_name']} {user['last_name']}"
+        serializer.validated_data['check_deposit_user_id'] = str(user['_id'])
+        serializer.validated_data['account_manager_id'] = str(account_manager['_id'])
+        serializer.save()
+        return BaseResponse.response(status=True, message='Check request pending', HTTP_STATUS=status.HTTP_200_OK)
+    
+
+
+
+                  
 
 
 

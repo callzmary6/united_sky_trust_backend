@@ -89,8 +89,6 @@ class GetUserDetail(generics.GenericAPIView):
         return BaseResponse.response(status=True, data=account_user, HTTP_STATUS=status.HTTP_200_OK)
 
 
-
-
 class FundAccount(generics.GenericAPIView):
     permission_classes = [IsAuthenticated, ]
     serializer_class= TransactionSerializer
@@ -247,8 +245,8 @@ class UpdateTransactionView(generics.GenericAPIView):
             return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
         except Exception as e:
             return BaseResponse.response(status=False, data=str(e), HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
-        
 
+        
 class DeleteTransaction(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     def delete(self, request, id):
@@ -272,18 +270,45 @@ class GetVirtualCards(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
         user = request.user
+        entry = int(request.GET.get('entry', 10))
+        page = int(request.GET.get('page', 1))
+        search = request.GET.get('search', '')
+
         query = {'account_manager_id': user['_id']}
 
-        filter = {'card_holder_name': 1, 'card_type': 1, 'balance': 1, 'card_number': 1, 'cvv': 1, 'valid_through': 1, 'is_activated': 1}
+        if search:
+            search_regex = re.compile(re.escape(search), re.IGNORECASE)
+            query['$or'] = [
+                {'card_holder_name': search_regex},
+                {'card_type': search_regex},
+                {'card_number': search_regex},
+                {'cvv': search_regex},
+                {'valid_through': search_regex},
+                {'status': search_regex}
+            ]
 
-        virtual_cards_obj = db.virtual_cards.find(query, filter).sort('createdAt', pymongo.DESCENDING)
+        filter = {'card_holder_name': 1, 'card_type': 1, 'balance': 1, 'card_number': 1, 'cvv': 1, 'valid_through': 1, 'status': 1}
 
-        virtual_cards = list(virtual_cards_obj)
+        sorted_virtual_cards = db.virtual_cards.find(query, filter).sort('createdAt', pymongo.DESCENDING)
 
-        return Response({
-            'status': 'success',
-            'virtual_cards': virtual_cards
-        }, status=responses['success'])
+        paginator = Paginator(list(sorted_virtual_cards), entry)
+        virtual_card_per_page = paginator.get_page(page)
+
+        virtual_cards = []
+
+        for virtual_card in virtual_card_per_page:
+            virtual_card['_id'] = str(virtual_card['_id'])
+            virtual_cards.append(virtual_card)
+
+        total_virtual_card = len(virtual_cards)
+
+        data = {
+            'virtual_cards': virtual_cards,
+            'total_virtual_cards': total_virtual_card,
+            'current_page': page
+        }
+
+        return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
     
 class ActivateVirtualCard(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
@@ -298,6 +323,48 @@ class ActivateVirtualCard(generics.GenericAPIView):
             # send email functionality
             return Response({'status': 'success', 'message': 'virtual card deactivated'}, status=responses['success'])
         return Response({'status': 'success', 'message': 'virtual card activated'}, status=responses['success'])
+    
+class GetChequeDeposits(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user
+        entry = int(request.GET.get('entry', 10))
+        page = int(request.GET.get('page', 1))
+        search = request.GET.get('search', '')
+
+        query = {'account_manager_id': str(user['_id'])}
+        display_fields = {'ref_number': 1, 'account_holder': 1, 'amount': 1, 'cheque_number': 1, 'status': 1, 'createdAt': 1, 'status': 1}
+
+        if search:
+            search_regex = re.compile(re.escape(search), re.IGNORECASE)
+            query['$or'] = [
+                {'ref_number': search_regex},
+                {'amount': search_regex},
+                {'cheque_number': search_regex},
+                {'status': search_regex},
+                {'account_holder': search_regex}
+            ]
+
+        sorted_deposit_cheques = db.cheque_deposits.find(query, display_fields).sort('createdAt', pymongo.DESCENDING)
+
+        paginator = Paginator(list(sorted_deposit_cheques), entry)
+        deposit_cheques_per_page = paginator.get_page(page)
+
+        deposit_cheques = []
+        for deposit_cheque in deposit_cheques_per_page:
+            deposit_cheque['_id'] = str(deposit_cheque['_id'])
+            deposit_cheques.append(deposit_cheque)
+
+        total_deposit_cheque = len(deposit_cheques)
+
+        data = {
+            'deposit_cheques': deposit_cheques,
+            'total_deposit_cheques': total_deposit_cheque,
+            'current_page': page
+        }
+
+        return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
+
     
 
 
