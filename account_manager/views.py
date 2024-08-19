@@ -284,10 +284,10 @@ class GetVirtualCards(generics.GenericAPIView):
                 {'card_number': search_regex},
                 {'cvv': search_regex},
                 {'valid_through': search_regex},
-                {'status': search_regex}
+                {'status': search_regex},
             ]
 
-        filter = {'card_holder_name': 1, 'card_type': 1, 'balance': 1, 'card_number': 1, 'cvv': 1, 'valid_through': 1, 'status': 1}
+        filter = {'card_holder_name': 1, 'card_type': 1, 'balance': 1, 'card_number': 1, 'cvv': 1, 'valid_through': 1, 'createdAt': 1, 'virtualcard_user_id':  1, 'status': 1}
 
         sorted_virtual_cards = db.virtual_cards.find(query, filter).sort('createdAt', pymongo.DESCENDING)
 
@@ -332,7 +332,7 @@ class GetChequeDeposits(generics.GenericAPIView):
         page = int(request.GET.get('page', 1))
         search = request.GET.get('search', '')
 
-        query = {'account_manager_id': str(user['_id'])}
+        query = {'account_manager_id': user['_id']}
         display_fields = {'ref_number': 1, 'account_holder': 1, 'amount': 1, 'cheque_number': 1, 'status': 1, 'createdAt': 1, 'status': 1}
 
         if search:
@@ -364,6 +364,21 @@ class GetChequeDeposits(generics.GenericAPIView):
         }
 
         return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
+    
+
+class ApproveChequeDeposit(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def patch(self, request, cheque_id):
+        user = request.user
+        cheque_deposits = db.cheque_deposits.find_one({'_id': ObjectId(cheque_id), 'account_manager_id': user['_id']})
+        with client.start_session() as session:
+            with session.start_transaction():
+                db.account_user.find_one_and_update({'_id': cheque_deposits['cheque_deposit_user_id']}, {'$inc': {'account_balance': cheque_deposits['cheque_amount']}}, session=session)
+                db.transactions.find_one_and_update({'cheque_id': ObjectId(cheque_id)}, {'$set': {'status': 'Completed'}}, session=session)
+                # send email functionality
+                return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
+                
+
 
     
 

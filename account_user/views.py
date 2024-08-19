@@ -5,7 +5,7 @@ from rest_framework.response import Response
 
 from authentication.permissions import IsAuthenticated
 from authentication.utils import Util
-from account_manager import utils
+from account_manager.utils import Util as manager_util
 
 from .serializers import TransferSerializer, VirtualCardSerializer, FundVirtualCardSerializer, SupportTicketSerializer, ChequeDepositSerializer
 from .utils import Util as user_util
@@ -15,7 +15,7 @@ from django.conf import settings
 from cloudinary.uploader import upload
 import uuid
 import pymongo
-import datetime
+from datetime import datetime
 
 db = settings.DB
 client = settings.MONGO_CLIENT
@@ -179,7 +179,7 @@ class TransferFundsView(generics.GenericAPIView):
                         session=session
                     )
 
-                    serializer.validated_data['ref_number'] = utils.Util.generate_code()
+                    serializer.validated_data['ref_number'] = manager_util.generate_code()
                     serializer.validated_data['createdAt'] = sender_result['last_balance_update_time']
 
                     # send debit email and sms functionality
@@ -322,7 +322,7 @@ class FundVirtualCard(generics.GenericAPIView):
         if virtual_card['is_activated'] == True:
             with client.start_session() as session:
                 with session.start_transaction():
-                    ref_number = utils.Util.generate_code()
+                    ref_number = manager_util.generate_code()
                     description = user_util.generate_formatted_code()
                     security_answer = serializer.validated_data['security_answer']
                     amount = serializer.validated_data['amount']
@@ -398,15 +398,37 @@ class CheckDepositRequest(generics.GenericAPIView):
         user = request.user
         account_manager = AccountManager.get_account_manager()
         data = request.data
+        front_cheque = request.FILES['front_cheque']
+        back_cheque = request.FILES['back_cheque']
 
         serializer = self.serializer_class(data=data)
         serializer.is_valid(raise_exception=True)
-        front_cheque_data = upload(serializer.validated_data['front_cheque'])
-        back_cheque_data = upload()
+        front_cheque_data = upload(front_cheque, folder='cheques')
+        back_cheque_data = upload(back_cheque,folder='cheques')
+
+        serializer.validated_data['front_cheque'] = front_cheque_data['secure_url']
+        serializer.validated_data['back_cheque'] = back_cheque_data['secure_url']
         serializer.validated_data['account_holder'] = f"{user['first_name']} {user['middle_name']} {user['last_name']}"
-        serializer.validated_data['check_deposit_user_id'] = str(user['_id'])
-        serializer.validated_data['account_manager_id'] = str(account_manager['_id'])
-        serializer.save()
+        serializer.validated_data['cheque_deposit_user_id'] = user['_id']
+        serializer.validated_data['account_manager_id'] = account_manager['_id']
+        serializer.validated_data['ref_number'] = manager_util.generate_code()
+        serializer.validated_data['createdAt'] = datetime.now()
+        cheque_data = serializer.save()
+
+        db.transactions.insert_one({
+            'type': 'Credit',
+            'amount': serializer.validated_data['cheque_amount'],
+            'scope': 'Cheque Deposit',
+            'cheque_id': cheque_data.inserted_id,
+            'description': 'Mobile Cheque Deposit',
+            'account_user_id': user['_id'],
+            'account_manager_id': user['account_manager_id'],
+            'account_holder': f"{user['first_name']} {user['middle_name']} {user['last_name']}",
+            'status': 'Pending',    
+            'ref_number': serializer.validated_data['ref_number'],
+            'createdAt': serializer.validated_data['createdAt'],
+        })
+
         return BaseResponse.response(status=True, message='Check request pending', HTTP_STATUS=status.HTTP_200_OK)
     
 

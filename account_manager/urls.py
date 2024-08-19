@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import GetRegisteredUsers, FundAccount, GetTransactions, UpdateAccountProfile, GetVirtualCards, ActivateVirtualCard, GetUserDetail, AccountUserTransactions, DeleteTransaction,UpdateTransactionView, GetChequeDeposits
+from .views import GetRegisteredUsers, FundAccount, GetTransactions, UpdateAccountProfile, GetVirtualCards, ActivateVirtualCard, GetUserDetail, AccountUserTransactions, DeleteTransaction,UpdateTransactionView, GetChequeDeposits, ApproveChequeDeposit
 
 urlpatterns = [
     path('get_registered_users', GetRegisteredUsers.as_view(), name='get-registered-users'),
@@ -14,5 +14,6 @@ urlpatterns = [
     path('update_profile', UpdateAccountProfile.as_view(), name='update-account'),
     path('get_virtual_cards', GetVirtualCards.as_view(), name='get-virtual-cards'),
     path('activate_virtual_card/<str:vc_id>', ActivateVirtualCard.as_view(), name='activate-virtual-card'),
-    path('get_check_deposit', GetChequeDeposits.as_view(), name='get-check-deposit'),
+    path('get_cheque_deposits', GetChequeDeposits.as_view(), name='get-check-deposit'),
+    path('approve_cheque_deposit/<str:cheque_id>', ApproveChequeDeposit.as_view(), name='approve-cheque-deposit'),
 ]

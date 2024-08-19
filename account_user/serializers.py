@@ -98,7 +98,7 @@ class ChequeDepositSerializer(serializers.Serializer):
     front_cheque = serializers.ImageField()
     back_cheque = serializers.ImageField()
     account_holder = serializers.CharField(read_only=True)
-    ref_number = serializers.CharField()
+    ref_number = serializers.CharField(read_only=True)
     cheque_number = serializers.CharField(read_only=True)
     status= serializers.CharField(default='Pending')
     cheque_deposit_user_id = serializers.CharField(read_only=True)
@@ -107,11 +107,8 @@ class ChequeDepositSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         validated_data['status'] = 'Pending'
-        validated_data['createdAt'] = datetime.now()
-        validated_data['ref_number'] = manager_util.generate_code()
         validated_data['cheque_number'] = auth_util.generate_number(9)
-        db.cheque_deposits.insert_one(validated_data)
-        return validated_data
+        return db.cheque_deposits.insert_one(validated_data)
         
 
         
