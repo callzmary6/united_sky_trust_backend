@@ -61,7 +61,6 @@ class AccountUserSerializer(serializers.Serializer):
     middle_name = serializers.CharField()
     last_name = serializers.CharField()
     country = serializers.CharField()
-    state = serializers.CharField()
     city = serializers.CharField()
     house_address = serializers.CharField()
     account_number = serializers.CharField(read_only=True)
@@ -72,7 +71,6 @@ class AccountUserSerializer(serializers.Serializer):
     cot_code = serializers.CharField()
     two_factor_pin = serializers.CharField(read_only=True)
     password = serializers.CharField(write_only=True)
-    password2 = serializers.CharField(write_only=True)
     is_authenticated = serializers.CharField(default=True)
     createdAt = serializers.CharField(read_only=True)
     isVerified = serializers.BooleanField(default=False)
@@ -80,8 +78,6 @@ class AccountUserSerializer(serializers.Serializer):
     is_two_factor = serializers.BooleanField(default=False)
     isSuspended = serializers.BooleanField(default=False)
     isTransferBlocked = serializers.BooleanField(default=True)
-    annual_income_range = serializers.CharField()
-    ssn = serializers.CharField()
     isAdmin = serializers.BooleanField(default=False)
     role = serializers.CharField(read_only=True)
     profile_picture = serializers.URLField(read_only=True)
@@ -89,14 +85,14 @@ class AccountUserSerializer(serializers.Serializer):
     is_verified_imf = serializers.BooleanField(default=False)
     is_verified_otp = serializers.BooleanField(default=False)
 
-    def validate(self, attrs):
-        password = attrs.get('password', '')
-        password2 = attrs.get('password2', '')
+    # def validate(self, attrs):
+    #     password = attrs.get('password', '')
+    #     password2 = attrs.get('password2', '')
 
-        if password != password2:
-            raise serializers.ValidationError({'error': 'password mismatch!'})
+    #     if password != password2:
+    #         raise serializers.ValidationError({'error': 'password mismatch!'})
         
-        return attrs
+    #     return attrs
 
     def create(self, validated_data):
         email = validated_data['email']
