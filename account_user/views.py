@@ -343,7 +343,6 @@ class FundVirtualCard(generics.GenericAPIView):
                         session=session
                     )
                     db.transactions.insert_one({
-                        '_id': uuid.uuid4().hex[:24],
                         'type': 'Debit',
                         'amount': amount,
                         'scope': 'VirtualCard Top-up',

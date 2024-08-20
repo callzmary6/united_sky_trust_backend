@@ -118,21 +118,21 @@ class CreateAccountUser(generics.GenericAPIView):
         profile_picture = request.data.get('profile_picture')
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
-            serializer.validated_data['account_manager_id'] = str(user['_id'])
-            upload_result = upload(profile_picture)
-            serializer.validated_data['profile_picture'] = upload_result['secure_url']
+            serializer.validated_data['account_manager_id'] = user['_id']
+            # upload_result = upload(profile_picture)
+            # serializer.validated_data['profile_picture'] = upload_result['secure_url']
             user_data = serializer.save()
 
             # Email Functionality
-            code = Util.generate_number(6)
-            db.otp_codes.create_index('expireAt', expireAfterSeconds=120)
-            expire_at = datetime.now() + timedelta(seconds=120)
-            db.otp_codes.insert_one({'user_id': user_data['_id'], 'code': code, 'expireAt': expire_at})
-            data = {
-                'subject': 'Email Confirmation',
-                'to': user_data['email'],
-                'body': f'Use this otp to verify your account {code}'
-            }
+            # code = Util.generate_number(6)
+            # db.otp_codes.create_index('expireAt', expireAfterSeconds=120)
+            # expire_at = datetime.now() + timedelta(seconds=120)
+            # db.otp_codes.insert_one({'user_id': user_data['_id'], 'code': code, 'expireAt': expire_at})
+            # data = {
+            #     'subject': 'Email Confirmation',
+            #     'to': user_data['email'],
+            #     'body': f'Use this otp to verify your account {code}'
+            # }
             # Util.email_send(data)
 
             data = {

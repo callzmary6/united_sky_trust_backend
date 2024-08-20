@@ -69,7 +69,7 @@ class AccountUserSerializer(serializers.Serializer):
     account_number = serializers.CharField(read_only=True)
     account_type = serializers.CharField()
     account_currency = serializers.CharField()
-    account_balance = serializers.FloatField()
+    account_balance = serializers.FloatField(read_only=True)
     imf_code = serializers.CharField()
     cot_code = serializers.CharField()
     auth_pin = serializers.CharField(read_only=True)
@@ -77,24 +77,23 @@ class AccountUserSerializer(serializers.Serializer):
     is_authenticated = serializers.CharField(default=True)
     createdAt = serializers.CharField(read_only=True)
     isVerified = serializers.BooleanField(default=False)
-    is_two_factor = serializers.BooleanField(default=False)
+    # is_two_factor = serializers.BooleanField(default=False)
     isSuspended = serializers.BooleanField(default=False)
     isTransferBlocked = serializers.BooleanField(default=True)
     isAdmin = serializers.BooleanField(default=False)
     role = serializers.CharField(read_only=True)
-    profile_picture = serializers.URLField(read_only=True)
-    # is_verified_cot = serializers.BooleanField(default=False)
-    # is_verified_imf = serializers.BooleanField(default=False)
-    # is_verified_otp = serializers.BooleanField(default=False)
+    profile_picture = serializers.URLField(default='')
+    is_verified_cot = serializers.BooleanField(default=False)
+    is_verified_imf = serializers.BooleanField(default=False)
+    is_verified_otp = serializers.BooleanField(default=False)
 
 
     def create(self, validated_data):
         email = validated_data['email']
         phone_number = validated_data['phone_number']
-
-        validated_data.pop('password2')
         validated_data['account_number'] = Util.generate_number(11)
         validated_data['role'] = 'User'
+        validated_data['profile_picture'] = ''
 
         if db.account_user.find_one({'email': email}):
             raise serializers.ValidationError({'error': {'email': 'Email is already in use!'}})
