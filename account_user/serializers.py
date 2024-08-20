@@ -101,7 +101,7 @@ class ChequeDepositSerializer(serializers.Serializer):
     ref_number = serializers.CharField(read_only=True)
     cheque_number = serializers.CharField(read_only=True)
     status= serializers.CharField(default='Pending')
-    cheque_deposit_user_id = serializers.CharField(read_only=True)
+    cheque_user_id = serializers.CharField(read_only=True)
     account_manager_id = serializers.CharField(read_only=True)                          
     createdAt = serializers.DateTimeField(read_only=True)
 

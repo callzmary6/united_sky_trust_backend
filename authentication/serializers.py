@@ -82,6 +82,9 @@ class AccountUserSerializer(serializers.Serializer):
     isTransferBlocked = serializers.BooleanField(default=True)
     isAdmin = serializers.BooleanField(default=False)
     role = serializers.CharField(read_only=True)
+    annual_income_range = serializers.CharField(read_only=True)
+    ssn = serializers.CharField(read_only=True)
+    occupation = serializers.CharField(read_only=True)
     profile_picture = serializers.URLField(default='')
     is_verified_cot = serializers.BooleanField(default=False)
     is_verified_imf = serializers.BooleanField(default=False)
@@ -91,6 +94,9 @@ class AccountUserSerializer(serializers.Serializer):
     def create(self, validated_data):
         email = validated_data['email']
         phone_number = validated_data['phone_number']
+        validated_data['occupation'] = ''
+        validated_data['ssn'] = ''
+        validated_data['annual_income_range'] = ''
         validated_data['account_number'] = Util.generate_number(11)
         validated_data['role'] = 'User'
         validated_data['profile_picture'] = ''
