@@ -83,18 +83,10 @@ class AccountUserSerializer(serializers.Serializer):
     isAdmin = serializers.BooleanField(default=False)
     role = serializers.CharField(read_only=True)
     profile_picture = serializers.URLField(read_only=True)
-    is_verified_cot = serializers.BooleanField(default=False)
-    is_verified_imf = serializers.BooleanField(default=False)
-    is_verified_otp = serializers.BooleanField(default=False)
+    # is_verified_cot = serializers.BooleanField(default=False)
+    # is_verified_imf = serializers.BooleanField(default=False)
+    # is_verified_otp = serializers.BooleanField(default=False)
 
-    # def validate(self, attrs):
-    #     password = attrs.get('password', '')
-    #     password2 = attrs.get('password2', '')
-
-    #     if password != password2:
-    #         raise serializers.ValidationError({'error': 'password mismatch!'})
-        
-    #     return attrs
 
     def create(self, validated_data):
         email = validated_data['email']
@@ -102,7 +94,6 @@ class AccountUserSerializer(serializers.Serializer):
 
         validated_data.pop('password2')
         validated_data['account_number'] = Util.generate_number(11)
-        validated_data['two_factor_pin'] = Util.generate_number(4)
         validated_data['role'] = 'User'
 
         if db.account_user.find_one({'email': email}):

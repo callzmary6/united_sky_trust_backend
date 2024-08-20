@@ -113,8 +113,8 @@ class CreateAccountUser(generics.GenericAPIView):
     def post(self, request):
         data = request.data
         user = request.user
-        if isinstance(user, AnonymousUser):
-            user = db.account_user.find_one({'is_admin': True})
+        # if isinstance(user, AnonymousUser):
+        #     user = db.account_user.find_one({'is_admin': True})
         profile_picture = request.data.get('profile_picture')
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
