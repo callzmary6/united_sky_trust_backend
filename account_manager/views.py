@@ -36,7 +36,7 @@ class GetRegisteredUsers(generics.GenericAPIView):
         page = int(request.GET.get('page', 1))
         search = request.GET.get('search', '')
 
-        query = {'account_manager_id': str(user_id)}
+        query = {'account_manager_id': user_id}
 
         if search:
             search_regex = re.compile(re.escape(search), re.IGNORECASE)
@@ -48,11 +48,7 @@ class GetRegisteredUsers(generics.GenericAPIView):
                 {'account_balance': search_regex},
             ]
         
-        users = db.account_user.find(query, {'first_name': 1, 'middle_name': 1, 'last_name': 1, 'email': 1, 'account_balance': 1, 'account_number': 1, 'isVerified': 1, 'createdAt': 1, 'isSuspended': 1, 'isTransferBlocked': 1})
-
-        total_users = db.account_user.count_documents(query)
-
-        sorted_users = sorted(users, key=lambda x: x['createdAt'], reverse=True)
+        sorted_users = db.account_user.find(query, {'first_name': 1, 'middle_name': 1, 'last_name': 1, 'email': 1, 'account_balance': 1, 'account_number': 1, 'isVerified': 1, 'createdAt': 1, 'isSuspended': 1, 'isTransferBlocked': 1}).sort('createdAt', pymongo.DESCENDING)
 
         list_users = []
         
@@ -64,6 +60,8 @@ class GetRegisteredUsers(generics.GenericAPIView):
         page_obj = paginator.get_page(page)
 
         new_users = list(page_obj)
+
+        total_users = len(list_users)
         
         data = {
             'registered_users': new_users,
