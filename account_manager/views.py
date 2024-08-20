@@ -331,7 +331,7 @@ class GetChequeDeposits(generics.GenericAPIView):
         search = request.GET.get('search', '')
 
         query = {'account_manager_id': user['_id']}
-        display_fields = {'ref_number': 1, 'account_holder': 1, 'amount': 1, 'cheque_number': 1, 'status': 1, 'createdAt': 1, 'status': 1}
+        display_fields = {'ref_number': 1, 'first_name': 1, 'middle_name': 1, 'last_name': 1, 'amount': 1, 'cheque_number': 1, 'cheque_currency': 1, 'status': 1, 'createdAt': 1}
 
         if search:
             search_regex = re.compile(re.escape(search), re.IGNORECASE)
