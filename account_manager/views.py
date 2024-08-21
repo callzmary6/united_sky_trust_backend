@@ -413,7 +413,7 @@ class ApproveChequeDeposit(generics.GenericAPIView):
         with client.start_session() as session:
             with session.start_transaction():
                 db.account_user.find_one_and_update({'_id': cheque_deposits['cheque_user_id']}, {'$inc': {'account_balance': cheque_deposits['amount']}}, session=session)
-                db.cheque_deposits.find_one_and_update({'cheque_id': ObjectId(cheque_id)}, {'$set': {'status': 'Completed'}}, session=session)
+                db.cheque_deposits.find_one_and_update({'_id': ObjectId(cheque_id)}, {'$set': {'status': 'Completed'}}, session=session)
                 # send email functionality
                 return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
                 
