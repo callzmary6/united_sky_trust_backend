@@ -18,7 +18,7 @@ class TransactionSerializer(serializers.Serializer):
     scope = serializers.CharField()
     description = serializers.CharField()
     status = serializers.CharField(read_only=True)
-    account_currency = serializers.CharField(read_only=True)
+    account_currency = serializers.CharField()
     send_email= serializers.BooleanField()
     createdAt = serializers.DateTimeField(read_only=True)
 

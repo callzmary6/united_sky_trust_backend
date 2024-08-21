@@ -105,7 +105,6 @@ class FundAccount(generics.GenericAPIView):
                         serializer.validated_data['account_manager_id'] = user['_id']
                         serializer.validated_data['account_holder'] = f"{account_user['first_name']} {account_user['middle_name']} {account_user['last_name']}"
                         serializer.validated_data['status'] = 'Completed'
-                        serializer.validated_data['account_currency'] = account_user['account_currency']
                         serializer.validated_data['ref_number'] = manager_util.generate_code()
                         serializer.validated_data['createdAt'] = datetime.datetime.now()
                         serializer.save()
@@ -131,7 +130,6 @@ class FundAccount(generics.GenericAPIView):
                         serializer.validated_data['account_manager_id'] = user['_id']
                         serializer.validated_data['account_holder'] = f"{account_user['first_name']} {account_user['middle_name']} {account_user['last_name']}"
                         serializer.validated_data['status'] = 'Completed'
-                        serializer.validated_data['account_currency'] = account_user['account_currency']
                         serializer.validated_data['ref_number'] = manager_util.generate_code()
                         serializer.validated_data['createdAt'] = datetime.datetime.now()
                         serializer.save()
@@ -399,7 +397,7 @@ class GetKYC(generics.GenericAPIView):
 
         data = {
             'kycs': kycs,
-            'total_deposit_cheques': total_kycs,
+            'total_kycs': total_kycs,
             'current_page': page
         }
 
