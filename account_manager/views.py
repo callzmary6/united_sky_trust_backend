@@ -49,7 +49,7 @@ class GetRegisteredUsers(generics.GenericAPIView):
                 {'account_balance': search_regex},
             ]
         
-        sorted_users = db.account_user.find(query, {'first_name': 1, 'middle_name': 1, 'last_name': 1, 'email': 1, 'account_balance': 1, 'account_number': 1, 'isVerified': 1, 'createdAt': 1, 'isSuspended': 1, 'isTransferBlocked': 1}).sort('createdAt', pymongo.DESCENDING)
+        sorted_users = db.account_user.find(query, {'is_authenticated': 0, 'password': 0, 'account_manager_id': 0, 'is_verified_otp': 0, 'is_verified_cot': 0, 'is_verified_imf': 0}).sort('createdAt', pymongo.DESCENDING)
 
         paginator = Paginator(list(sorted_users), entry)
         page_obj = paginator.get_page(page)
