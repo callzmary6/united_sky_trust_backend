@@ -144,7 +144,7 @@ class GetTransactions(generics.GenericAPIView):
         entry = int(request.GET.get('entry', 10))
         page = int(request.GET.get('page', 1))
         search = request.GET.get('search', '')
-        user_id = str(user['_id'])
+        user_id = user['_id']
 
         query = {'account_manager_id': user_id}
 
