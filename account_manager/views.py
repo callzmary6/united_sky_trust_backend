@@ -449,6 +449,31 @@ class DeleteKYC(generics.GenericAPIView):
         user = request.user
         db.kyc.delete_one({'_id': ObjectId(kyc_id), 'account_manager_id': user['_id']})
         return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
+
+
+class WireTransfer(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        user = request.user
+        data = request.data
+        db.transactions.insert_one({
+            'type': 'Debit',
+            'amount': data['amount'],
+            'scope': 'Wire Transfer',
+            'description': '',
+            'account_currency': data['currency'],
+            'transaction_user_id': '',
+            'account_manager_id': user['_id'],
+            'account_holder': '',
+            'status': 'Completed',
+            'ref_number': manager_util.generate_code(),
+            'createdAt': datetime.datetime.now()
+        })
+
+        return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
+
+        
+        
     
 
                 
