@@ -472,6 +472,64 @@ class WireTransfer(generics.GenericAPIView):
 
         return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
 
+class GetTotalRegisteredUsers(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user
+        total_users = db.account_user.count_documents({'account_manager_id': user['_id']})
+        return BaseResponse.response(status=True, data={'total_users': total_users},HTTP_STATUS=status.HTTP_200_OK)
+    
+class GetTotalTransactions(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user
+        total_transactions = db.transactions.count_documents({'account_manager_id': user['_id']})
+        return BaseResponse.response(status=True, data={'total_transactions': total_transactions},HTTP_STATUS=status.HTTP_200_OK)
+    
+class GetTotalChequeDeposits(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user
+        total_cheque_deposits = db.cheque_deposits.count_documents({'account_manager_id': user['_id']})
+        return BaseResponse.response(status=True, data={'total_cheque_deposits': total_cheque_deposits},HTTP_STATUS=status.HTTP_200_OK)
+    
+class GetTotalUnverifiedUsers(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user
+        total_unverified_users = db.account_user.count_documents({'account_manager_id': user['_id'], 'isVerified': False})
+        return BaseResponse.response(status=True, data={'total_unverified_users': total_unverified_users},HTTP_STATUS=status.HTTP_200_OK)
+
+
+class GetChartData(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user
+
+        end_date = datetime.datetime.now()
+        start_date = end_date - datetime.timedelta(days=6)
+
+        query = {'account_manager_id': user['_id'], 'createdAt': {'$gte': start_date, '$lte': end_date + datetime.timedelta(days=1)}}
+
+        transactions_this_week = db.transactions.count_documents(query)
+        users_this_week = db.account_user.count_documents(query)
+
+        data = {
+            'transactions_this_week': transactions_this_week,
+            'users_this_week': users_this_week
+        }
+        return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
+    
+class GetCurrencyChartData(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user
+        query = {'account_manager_id': user['_id'], }
+        pass
+
+
+
+
         
         
     

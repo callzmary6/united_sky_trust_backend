@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import GetRegisteredUsers, FundAccount, GetTransactions, UpdateAccountProfile, GetVirtualCards, ActivateVirtualCard, GetUserDetail, AccountUserTransactions, DeleteTransaction,UpdateTransactionView, GetChequeDeposits, ApproveChequeDeposit, GetKYC, DeleteChequeDeposit, DeleteKYC, ApproveKYC, WireTransfer
+from .views import GetRegisteredUsers, FundAccount, GetTransactions, UpdateAccountProfile, GetVirtualCards, ActivateVirtualCard, GetUserDetail, AccountUserTransactions, DeleteTransaction,UpdateTransactionView, GetChequeDeposits, ApproveChequeDeposit, GetKYC, DeleteChequeDeposit, DeleteKYC, ApproveKYC, WireTransfer, GetTotalRegisteredUsers, GetTotalTransactions, GetTotalUnverifiedUsers, GetTotalChequeDeposits, GetChartData
 
 urlpatterns = [
     path('get_registered_users', GetRegisteredUsers.as_view(), name='get-registered-users'),
@@ -21,4 +21,11 @@ urlpatterns = [
     path('delete_kyc/<str:kyc_id>', DeleteKYC.as_view(), name='delete-kyc'),
     path('approve_kyc/<str:kyc_id>', ApproveKYC.as_view(), name='approve-kyc'),
     path('wire_transfer', WireTransfer.as_view(), name='wire-transfer'),
+
+    # Dashboard endpoints
+    path('total_users', GetTotalRegisteredUsers.as_view(), name='total-users'),
+    path('total_unverified_users', GetTotalUnverifiedUsers.as_view(), name='get-unverified-users'),
+    path('total_cheque_deposits', GetTotalChequeDeposits.as_view(), name='total-cheque-deposits'),
+    path('total_transactions', GetTotalTransactions.as_view(), name='total-transactions'),
+    path('get_chart_data', GetChartData.as_view(), name='get-chart-data'),
 ]
