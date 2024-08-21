@@ -90,52 +90,57 @@ class GetUserDetail(generics.GenericAPIView):
 class FundAccount(generics.GenericAPIView):
     permission_classes = [IsAuthenticated, ]
     serializer_class= TransactionSerializer
-    def post(self, request, acn):
-        user = request.user
-        serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            account_user = db.account_user.find_one({'account_number': acn, 'account_manager_id': str(user['_id'])})
-            new_account_balance = account_user['account_balance']
-            if serializer.validated_data['type'] == 'credit' or serializer.validated_data['type'] == 'Credit':
-                for i in range(serializer.validated_data['frequency']):
-                    new_account_balance += serializer.validated_data['amount']
-            else:
-                if account_user['account_balance'] < serializer.validated_data['amount']:
-                    return Response({'status': 'failed', 'error': 'Insufficient Funds'}, status=status.HTTP_400_BAD_REQUEST)
-                for i in range(serializer.validated_data['frequency']):
-                    new_account_balance -= serializer.validated_data['amount']
+    def post(self, request, user_id):
+        pass
+        # user = request.user
+        # serializer = self.serializer_class(data=request.data)
+        # if serializer.is_valid():
+        #     account_user = db.account_user.find_one({'_id': user_id, 'account_manager_id': user['_id']})
+        #     new_account_balance = account_user['account_balance']
 
-            db.account_user.update_one({'account_number': acn}, {'$set':{'account_balance': new_account_balance}})
+        #     with client.start_session() as session:
+        #         with session.start_transaction():
+                    
+        #             if serializer.validated_data['type'] == 'Credit':
+        #         for i in range(serializer.validated_data['frequency']):
+        #             new_account_balance += serializer.validated_data['amount']
+        #     else:
+        #         if account_user['account_balance'] < serializer.validated_data['amount']:
+        #             return Response({'status': 'failed', 'error': 'Insufficient Funds'}, status=status.HTTP_400_BAD_REQUEST)
+        #         for i in range(serializer.validated_data['frequency']):
+        #             new_account_balance -= serializer.validated_data['amount']
 
-            serializer.validated_data['transaction_user_id'] = str(account_user['_id'])
-            serializer.validated_data['account_manager_id'] = str(user['_id'])
-            serializer.validated_data['account_holder'] = f"{account_user['first_name']} {account_user['middle_name']} {account_user['last_name']}"
-            serializer.validated_data['status'] = 'Completed'
-            serializer.validated_data['account_currency'] = account_user['account_currency']
-            serializer.validated_data['ref_number'] = manager_util.generate_code()
-            serializer.validated_data['createdAt'] = datetime.datetime.now()
-            serializer.save()
+        #     db.account_user.update_one({'account_number': acn}, {'$set':{'account_balance': new_account_balance}})
+
+        #     serializer.validated_data['transaction_user_id'] = str(account_user['_id'])
+        #     serializer.validated_data['account_manager_id'] = str(user['_id'])
+        #     serializer.validated_data['account_holder'] = f"{account_user['first_name']} {account_user['middle_name']} {account_user['last_name']}"
+        #     serializer.validated_data['status'] = 'Completed'
+        #     serializer.validated_data['account_currency'] = account_user['account_currency']
+        #     serializer.validated_data['ref_number'] = manager_util.generate_code()
+        #     serializer.validated_data['createdAt'] = datetime.datetime.now()
+        #     serializer.save()
             
-            db.transactions.insert_one({
-                    'type': 'Credit',
-                    'amount': serializer.validated_data['amount'],
-                    'scope': 'Local Transfer',
-                    'description': serializer.validated_data['description'],
-                    'frequency': 1,
-                    'transaction_user_id': account_user['_id'],
-                    'account_manager_id': user['_id'],
-                    'account_holder': f"{account_user['first_name']} {account_user['middle_name']} {account_user['last_name']}",
-                    'account_currency': serializer.validated_data['account_currency'],
-                    'account_number': acn,
-                    'status': 'Completed',
-                    'ref_number': serializer.validated_data['ref_number'],
-                    'createdAt': serializer.validated_data['createdAt'],
-                    })
+        #     db.transactions.insert_one({
+        #             'type': 'Credit',
+        #             'amount': serializer.validated_data['amount'],
+        #             'scope': 'Local Transfer',
+        #             'description': serializer.validated_data['description'],
+        #             'frequency': 1,
+        #             'transaction_user_id': account_user['_id'],
+        #             'account_manager_id': user['_id'],
+        #             'account_holder': f"{account_user['first_name']} {account_user['middle_name']} {account_user['last_name']}",
+        #             'account_currency': serializer.validated_data['account_currency'],
+        #             'account_number': acn,
+        #             'status': 'Completed',
+        #             'ref_number': serializer.validated_data['ref_number'],
+        #             'createdAt': serializer.validated_data['createdAt'],
+        #             })
 
-            # Send email functionality
+        #     # Send email functionality
 
-            return BaseResponse.response(status=True, data={'new_account_balance': new_account_balance}, HTTP_STATUS=status.HTTP_200_OK)#
-        return BaseResponse.response(status=False, data=serializer.errors, HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
+        #     return BaseResponse.response(status=True, data={'new_account_balance': new_account_balance}, HTTP_STATUS=status.HTTP_200_OK)#
+        # return BaseResponse.response(status=False, data=serializer.errors, HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
     
 
 class GetTransactions(generics.GenericAPIView):
@@ -431,27 +436,19 @@ class ApproveKYC(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     def patch(self, request, kyc_id):
         user = request.user
+        kyc = db.kyc.find_one({'_id': ObjectId(kyc_id), 'account_manager_id': user['_id']})
 
         with client.start_session() as session:
             with session.start_transaction():
-                kyc = db.kyc.find_one_and_update({'_id': ObjectId(kyc_id), 'account_manager_id': user['_id']}, {'$set': {'status': 'Active'}}, session=session)
-                db.account_user.find_one_and_update({'_id': kyc['kyc_user_id']}, {'$set': {'isTransferBlocked': False}}, session=session)
+                if kyc['status'] == 'Pending':
+                    db.kyc.update_one({'_id': ObjectId(kyc_id), 'account_manager_id': user['_id']}, {'$set': {'status': 'Completed'}}, session=session)
+                    db.account_user.find_one_and_update({'_id': kyc['kyc_user_id']}, {'$set': {'isTransferBlocked': False}}, session=session)
+                else:
+                    db.kyc.update_one({'_id': ObjectId(kyc_id), 'account_manager_id': user['_id']}, {'$set': {'status': 'Pending'}}, session=session)
+                    db.account_user.find_one_and_update({'_id': kyc['kyc_user_id']}, {'$set': {'isTransferBlocked': True}}, session=session)
                 # send email functionality
                 return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
-            
-class PauseKYC(generics.GenericAPIView):
-    permission_classes = [IsAuthenticated]
-    def patch(self, request, kyc_id):
-        user = request.user
-
-        with client.start_session() as session:
-            with session.start_transaction():
-                kyc = db.kyc.find_one_and_update({'_id': ObjectId(kyc_id), 'account_manager_id': user['_id']}, {'$set': {'status': 'Pending'}}, session=session)
-                # send email functionality
-                return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
-
-
-    
+                
 class DeleteKYC(generics.GenericAPIView):
     def delete(self, request, kyc_id):
         user = request.user
