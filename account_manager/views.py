@@ -416,6 +416,18 @@ class ApproveChequeDeposit(generics.GenericAPIView):
                 db.cheque_deposits.find_one_and_update({'_id': ObjectId(cheque_id)}, {'$set': {'status': 'Completed'}}, session=session)
                 # send email functionality
                 return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
+            
+class DeleteChequeDeposit(generics.GenericAPIView):
+    def delete(self, request, cheque_id):
+        user = request.user
+        db.cheque_deposits.delete_one({'_id': ObjectId(cheque_id), 'account_manager_id': user['_id']})
+        return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
+    
+class DeleteKYC(generics.GenericAPIView):
+    def delete(self, request, kyc_id):
+        user = request.user
+        db.kyc.delete_one({'_id': ObjectId(kyc_id), 'account_manager_id': user['_id']})
+        return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
                 
 
 

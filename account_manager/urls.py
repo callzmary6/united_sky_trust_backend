@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import GetRegisteredUsers, FundAccount, GetTransactions, UpdateAccountProfile, GetVirtualCards, ActivateVirtualCard, GetUserDetail, AccountUserTransactions, DeleteTransaction,UpdateTransactionView, GetChequeDeposits, ApproveChequeDeposit, GetKYC
+from .views import GetRegisteredUsers, FundAccount, GetTransactions, UpdateAccountProfile, GetVirtualCards, ActivateVirtualCard, GetUserDetail, AccountUserTransactions, DeleteTransaction,UpdateTransactionView, GetChequeDeposits, ApproveChequeDeposit, GetKYC, DeleteChequeDeposit, DeleteKYC
 
 urlpatterns = [
     path('get_registered_users', GetRegisteredUsers.as_view(), name='get-registered-users'),
@@ -17,4 +17,6 @@ urlpatterns = [
     path('get_cheque_deposits', GetChequeDeposits.as_view(), name='get-check-deposit'),
     path('get_kycs', GetKYC.as_view(), name='get-kycs'),
     path('approve_cheque_deposit/<str:cheque_id>', ApproveChequeDeposit.as_view(), name='approve-cheque-deposit'),
+    path('delete_cheque_deposit/<str:cheque_id>', DeleteChequeDeposit.as_view(), name='delete-cheque-deposit'),
+    path('delete_kyc/<str:kyc_id>', DeleteKYC.as_view(), name='delete-kyc'),
 ]
