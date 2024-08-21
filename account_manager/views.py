@@ -426,12 +426,39 @@ class DeleteChequeDeposit(generics.GenericAPIView):
         user = request.user
         db.cheque_deposits.delete_one({'_id': ObjectId(cheque_id), 'account_manager_id': user['_id']})
         return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
+
+class ApproveKYC(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def patch(self, request, kyc_id):
+        user = request.user
+
+        with client.start_session() as session:
+            with session.start_transaction():
+                kyc = db.kyc.find_one_and_update({'_id': ObjectId(kyc_id), 'account_manager_id': user['_id']}, {'$set': {'status': 'Active'}}, session=session)
+                db.account_user.find_one_and_update({'_id': kyc['kyc_user_id']}, {'$set': {'isTransferBlocked': False}}, session=session)
+                # send email functionality
+                return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
+            
+class PauseKYC(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def patch(self, request, kyc_id):
+        user = request.user
+
+        with client.start_session() as session:
+            with session.start_transaction():
+                kyc = db.kyc.find_one_and_update({'_id': ObjectId(kyc_id), 'account_manager_id': user['_id']}, {'$set': {'status': 'Pending'}}, session=session)
+                # send email functionality
+                return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
+
+
     
 class DeleteKYC(generics.GenericAPIView):
     def delete(self, request, kyc_id):
         user = request.user
         db.kyc.delete_one({'_id': ObjectId(kyc_id), 'account_manager_id': user['_id']})
         return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
+    
+
                 
 
 
