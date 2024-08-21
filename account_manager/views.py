@@ -50,18 +50,16 @@ class GetRegisteredUsers(generics.GenericAPIView):
         
         sorted_users = db.account_user.find(query, {'first_name': 1, 'middle_name': 1, 'last_name': 1, 'email': 1, 'account_balance': 1, 'account_number': 1, 'isVerified': 1, 'createdAt': 1, 'isSuspended': 1, 'isTransferBlocked': 1}).sort('createdAt', pymongo.DESCENDING)
 
-        list_users = []
-        
-        for user in sorted_users:
-            user['_id'] = str(user['_id'])
-            list_users.append(user)
-
-        paginator = Paginator(list_users, entry)
+        paginator = Paginator(list(sorted_users), entry)
         page_obj = paginator.get_page(page)
 
-        new_users = list(page_obj)
+        new_users = []
 
-        total_users = len(list_users)
+        for user in page_obj:
+            user['_id'] = str(user['_id'])
+            new_users.append(user)
+
+        total_users = len(new_users)
         
         data = {
             'registered_users': new_users,
