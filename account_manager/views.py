@@ -378,10 +378,9 @@ class GetKYC(generics.GenericAPIView):
             search_regex = re.compile(re.escape(search), re.IGNORECASE)
             query['$or'] = [
                 {'ref_number': search_regex},
-                {'amount': search_regex},
-                {'cheque_number': search_regex},
-                {'status': search_regex},
-                {'account_holder': search_regex}
+                {'first_name': search_regex},
+                {'last_name': search_regex},
+                {'middle_name': search_regex},
             ]
 
         sorted_kycs = db.kyc.find(query, display_fields).sort('createdAt', pymongo.DESCENDING)
@@ -413,8 +412,8 @@ class ApproveChequeDeposit(generics.GenericAPIView):
         cheque_deposits = db.cheque_deposits.find_one({'_id': ObjectId(cheque_id), 'account_manager_id': user['_id']})
         with client.start_session() as session:
             with session.start_transaction():
-                db.account_user.find_one_and_update({'_id': cheque_deposits['cheque_deposit_user_id']}, {'$inc': {'account_balance': cheque_deposits['cheque_amount']}}, session=session)
-                db.transactions.find_one_and_update({'cheque_id': ObjectId(cheque_id)}, {'$set': {'status': 'Completed'}}, session=session)
+                db.account_user.find_one_and_update({'_id': cheque_deposits['cheque_user_id']}, {'$inc': {'account_balance': cheque_deposits['amount']}}, session=session)
+                db.cheque_deposits.find_one_and_update({'cheque_id': ObjectId(cheque_id)}, {'$set': {'status': 'Completed'}}, session=session)
                 # send email functionality
                 return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
                 
