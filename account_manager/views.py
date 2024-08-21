@@ -295,6 +295,7 @@ class GetVirtualCards(generics.GenericAPIView):
 
         for virtual_card in virtual_card_per_page:
             virtual_card['_id'] = str(virtual_card['_id'])
+            virtual_card['virtualcard_user_id'] = str(virtual_card['virtualcard_user_id'])
             virtual_cards.append(virtual_card)
 
         total_virtual_card = len(virtual_cards)
