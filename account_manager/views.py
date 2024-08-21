@@ -363,6 +363,48 @@ class GetChequeDeposits(generics.GenericAPIView):
 
         return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
     
+class GetKYC(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user
+        entry = int(request.GET.get('entry', 10))
+        page = int(request.GET.get('page', 1))
+        search = request.GET.get('search', '')
+
+        query = {'account_manager_id': user['_id']}
+        display_fields = {'kyc_user_id': 1, 'ref_number': 1, 'first_name': 1, 'middle_name': 1, 'last_name': 1, 'email': 1, 'kyc_document': 1, 'kyc_image': 1, 'status': 1, 'createdAt': 1}
+
+        if search:
+            search_regex = re.compile(re.escape(search), re.IGNORECASE)
+            query['$or'] = [
+                {'ref_number': search_regex},
+                {'amount': search_regex},
+                {'cheque_number': search_regex},
+                {'status': search_regex},
+                {'account_holder': search_regex}
+            ]
+
+        sorted_kycs = db.kyc.find(query, display_fields).sort('createdAt', pymongo.DESCENDING)
+
+        paginator = Paginator(list(sorted_kycs), entry)
+        kyc_per_page = paginator.get_page(page)
+
+        kycs = []
+        for kyc in kyc_per_page:
+            kyc['_id'] = str(kyc['_id'])
+            kyc['kyc_user_id'] = str(kyc['kyc_user_id'])
+            kycs.append(kyc)
+
+        total_kycs = len(kycs)
+
+        data = {
+            'kycs': kycs,
+            'total_deposit_cheques': total_kycs,
+            'current_page': page
+        }
+
+        return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
+    
 
 class ApproveChequeDeposit(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
