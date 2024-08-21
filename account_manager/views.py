@@ -312,12 +312,12 @@ class ActivateVirtualCard(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     def post(self, request, vc_id):
         user = request.user
-        is_activated = False
-        query = {'_id': vc_id, 'account_manager_id': user['_id'], 'is_activated': is_activated}
-        virtual_card = db.virtual_cards.find_one_and_update(query, {'$set': {'is_activated': True}})
+        status = 'Pending'
+        query = {'_id': ObjectId(vc_id), 'account_manager_id': user['_id'], 'status': status}
+        virtual_card = db.virtual_cards.find_one_and_update(query, {'$set': {'status': 'Active'}})
         if virtual_card is None:
-            query['is_activated'] = True
-            virtual_card = db.virtual_cards.find_one_and_update(query, {'$set': {'is_activated': False}})
+            query['status'] = 'Active'
+            virtual_card = db.virtual_cards.find_one_and_update(query, {'$set': {'status': status}})
             # send email functionality
             return Response({'status': 'success', 'message': 'virtual card deactivated'}, status=responses['success'])
         return Response({'status': 'success', 'message': 'virtual card activated'}, status=responses['success'])
