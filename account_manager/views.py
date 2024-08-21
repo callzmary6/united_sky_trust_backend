@@ -412,10 +412,14 @@ class ApproveChequeDeposit(generics.GenericAPIView):
         cheque_deposits = db.cheque_deposits.find_one({'_id': ObjectId(cheque_id), 'account_manager_id': user['_id']})
         with client.start_session() as session:
             with session.start_transaction():
-                db.account_user.find_one_and_update({'_id': cheque_deposits['cheque_user_id']}, {'$inc': {'account_balance': cheque_deposits['amount']}}, session=session)
-                db.cheque_deposits.find_one_and_update({'_id': ObjectId(cheque_id)}, {'$set': {'status': 'Completed'}}, session=session)
-                # send email functionality
-                return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
+                if cheque_deposits['status'] == 'Pending':
+                    db.account_user.find_one_and_update({'_id': cheque_deposits['cheque_user_id']}, {'$inc': {'account_balance': cheque_deposits['amount']}}, session=session)
+                    db.cheque_deposits.find_one_and_update({'_id': ObjectId(cheque_id)}, {'$set': {'status': 'Completed'}}, session=session)
+                    # send email functionality
+                    return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
+                else:
+                    db.cheque_deposits.find_one_and_update({'_id': ObjectId(cheque_id)}, {'$set': {'status': 'Pending'}}, session=session)
+                    return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
             
 class DeleteChequeDeposit(generics.GenericAPIView):
     def delete(self, request, cheque_id):
