@@ -7,7 +7,7 @@ from authentication.permissions import IsAuthenticated
 from authentication.utils import Util
 from account_manager.utils import Util as manager_util
 
-from .serializers import TransferSerializer, VirtualCardSerializer, FundVirtualCardSerializer, SupportTicketSerializer, ChequeDepositSerializer
+from .serializers import TransferSerializer, VirtualCardSerializer, FundVirtualCardSerializer, SupportTicketSerializer, ChequeDepositSerializer, CommentSerializer
 from .utils import Util as user_util
 from united_sky_trust.base_response import BaseResponse
 
@@ -15,6 +15,7 @@ from django.conf import settings
 from cloudinary.uploader import upload
 import uuid
 import pymongo
+from bson import ObjectId
 from datetime import datetime
 
 db = settings.DB
@@ -287,15 +288,6 @@ class VirtualCardRequest(generics.GenericAPIView):
         virtual_card_data = serializer.save()
 
         virtual_card = db.virtual_cards.find_one({'_id': virtual_card_data.inserted_id})
-        
-
-        # db.security_questions.insert_one({
-        # '_id': uuid.uuid4().hex[:24],
-        # 'question': virtual_card['security_question'],
-        # 'answer': virtual_card['answer'],
-        # 'account_user_id': virtual_card['_id'],
-        # 'account_manager_id': virtual_card['account_manager_id']
-        # })
 
         data = {
             'card_type': virtual_card['card_type'],
@@ -373,7 +365,7 @@ class GetVirtualCards(generics.GenericAPIView):
 
         return Response({'status': 'success', 'virtual_cards': virtual_cards, 'total_virtual_cards': total_cards}, status=responses['success'])
     
-class SupportTicketView(generics.GenericAPIView):
+class CreateSupportTicketView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = SupportTicketSerializer
 
@@ -384,11 +376,40 @@ class SupportTicketView(generics.GenericAPIView):
         serializer = self.serializer_class(data=data)
         serializer.is_valid(raise_exception=True)
 
-        serializer.validated_data['account_user_id'] = user['_id']
+        serializer.validated_data['support_user_id'] = user['_id']
         serializer.validated_data['account_manager_id'] = user['account_manager_id']
+        serializer.validated_data['comments'] = []
+
         serializer.save()
 
-        return Response({'status': 'success', 'message': 'support ticket created'}, status=responses['success'])
+        return Response({'status': 'success', 'message': 'Support ticket created!'}, status=responses['success'])
+    
+class CreateCommentView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, support_ticket_id):
+        user = request.user
+        data  = request.data
+
+        support_ticket = db.support_ticket.find_one({'support_user_id': user['_id'], '_id': ObjectId(support_ticket_id)})
+
+        old_comments = support_ticket['comments']
+        
+        comment = db.comments.insert_one({
+            'message': data['message'],
+            'support_ticket_id': support_ticket['_id'],
+            'comment_user_full_name': f"{user['first_name']} {user['middle_name']} {user['last_name']}",
+            'sender_id': user['_id'],
+            'receiver_id': user['account_manager_id'],
+            'createdAt': datetime.now()
+        })  
+
+        new_comments = old_comments + [comment.inserted_id]  
+
+        db.support_ticket.update_one({'_id': support_ticket['_id']}, {'$set': {'comments': new_comments}})
+
+        return BaseResponse.response(status=True, message='Reply sent!', HTTP_STATUS=status.HTTP_200_OK)
+
     
 class CheckDepositRequest(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]

@@ -73,25 +73,30 @@ class FundVirtualCardSerializer(serializers.Serializer):
     amount = serializers.FloatField()
     security_answer = serializers.CharField()
 
+class CommentSerializer(serializers.Serializer):
+    support_ticket_id = serializers.CharField(read_only=True)
+    message = serializers.CharField()
+    sender_id = serializers.CharField(read_only=True)
+    receiver_id = serializers.CharField(read_only=True)
+    createdAt = serializers.DateTimeField(read_only=True)
+
 class SupportTicketSerializer(serializers.Serializer):
-    _id = serializers.UUIDField(default=uuid.uuid4().hex[:24])
-    account_user_id = serializers.UUIDField(read_only=True)
-    account_manager_id = serializers.UUIDField(read_only=True)
+    support_user_id = serializers.CharField(read_only=True)
+    account_manager_id = serializers.CharField(read_only=True)
     department = serializers.CharField()
-    complaints = serializers.CharField()
+    title = serializers.CharField()
+    comments = serializers.CharField(read_only=True)
+    support_user_full_name = serializers.CharField(read_only=True)
     ticket_id = serializers.CharField(read_only=True)
+    status = serializers.CharField(read_only=True)
     createdAt = serializers.DateTimeField(read_only=True)
 
     def create(self, validated_data):
         validated_data['ticket_id'] = user_util.generate_ticket_id()
         validated_data['createdAt'] = datetime.now()
+        validated_data['status'] = 'Active'
         return db.support_ticket.insert_one(validated_data)
     
-
-class CommentSerializer(serializers.Serializer):
-    _id = serializers.UUIDField(default=uuid.uuid4().hex[:24])
-    support_ticket_id = serializers.UUIDField()
-
 
 class ChequeDepositSerializer(serializers.Serializer):
     cheque_amount = serializers.FloatField()

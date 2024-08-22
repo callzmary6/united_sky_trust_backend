@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import GetRegisteredUsers, FundAccount, GetTransactions, UpdateAccountProfile, GetVirtualCards, ActivateVirtualCard, GetUserDetail, AccountUserTransactions, DeleteTransaction,UpdateTransactionView, GetChequeDeposits, ApproveChequeDeposit, GetKYC, DeleteChequeDeposit, DeleteKYC, ApproveKYC, WireTransfer, GetTotalRegisteredUsers, GetTotalTransactions, GetTotalUnverifiedUsers, GetTotalChequeDeposits, GetChartData, GetCurrencyChartData, SendCustomEmail
+from .views import GetRegisteredUsers, FundAccount, GetTransactions, UpdateAccountProfile, GetVirtualCards, ActivateVirtualCard, GetUserDetail, AccountUserTransactions, DeleteTransaction,UpdateTransactionView, GetChequeDeposits, ApproveChequeDeposit, GetKYC, DeleteChequeDeposit, DeleteKYC, ApproveKYC, WireTransfer, GetTotalRegisteredUsers, GetTotalTransactions, GetTotalUnverifiedUsers, GetTotalChequeDeposits, GetChartData, GetCurrencyChartData, SendCustomEmail, CreateCommentView, GetComments, GetSupportTicket
 
 urlpatterns = [
     path('get_registered_users', GetRegisteredUsers.as_view(), name='get-registered-users'),
@@ -30,4 +30,9 @@ urlpatterns = [
     path('get_chart_data', GetChartData.as_view(), name='get-chart-data'),
     path('get_currency_users', GetCurrencyChartData.as_view(), name='get-currency-users'),
     path('send_custom_email', SendCustomEmail.as_view(), name='send-custom-email'),
+
+    # Support Ticket endpoints
+    path('create_comment/<str:support_ticket_id>', CreateCommentView.as_view(), name='create-comment'),
+    path('get_comments/<str:support_ticket_id>', GetComments.as_view(), name='get-comments'),
+    path('get_support_tickets', GetSupportTicket.as_view(), name='get-support-tickets'),
 ]

@@ -557,6 +557,97 @@ class SendCustomEmail(generics.GenericAPIView):
 
         return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
     
+class CreateCommentView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, support_ticket_id):
+        user = request.user
+        data  = request.data
+
+        support_ticket = db.support_ticket.find_one({'account_manager_id': user['_id'], '_id': ObjectId(support_ticket_id)})
+
+        old_comments = support_ticket['comments']
+        
+        comment = db.comments.insert_one({
+            'message': data['message'],
+            'support_ticket_id': support_ticket['_id'],
+            'sender_id': user['_id'],
+            'receiver_id': ObjectId(support_ticket['support_user_id']),
+            'comment_user_full_name': 'Customer Care',
+            'createdAt': datetime.datetime.now()
+        })
+
+        new_comments = old_comments + [comment.inserted_id]  
+
+        db.support_ticket.update_one({'_id': support_ticket['_id']}, {'$set': {'comments': new_comments}})
+
+        return BaseResponse.response(status=True, message='Reply sent!', HTTP_STATUS=status.HTTP_200_OK)
+    
+class GetComments(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request, support_ticket_id):
+        user = request.user
+        support_ticket = db.support_ticket.find_one({'account_manager_id': user['_id'], '_id': ObjectId(support_ticket_id)})
+        
+        comment_obj = db.comments.find({'support_ticket_id': ObjectId(support_ticket_id), '_id': {'$in': support_ticket['comments']}}, {'support_ticket_id': 0, 'sender_id': 0, 'receiver_id': 0}).sort('createdAt', pymongo.ASCENDING)
+
+        comments = []
+
+        for comment in comment_obj:
+            comment['_id'] = str(comment['_id'])
+            comments.append(comment)
+
+        data = {
+            'ticket_id': support_ticket['ticket_id'],
+            'comments': comments,
+        }
+
+        return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
+    
+class GetSupportTicket(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user
+        entry = int(request.GET.get('entry', 10))
+        page = int(request.GET.get('page', 1))
+        search = request.GET.get('search', '')
+
+        query = {'account_manager_id': user['_id']}
+        display_fields = {'_id': 1, 'department': 1, 'ticket_id': 1, 'createdAt': 1, 'comments': 1, 'status': 1}
+
+        if search:
+            search_regex = re.compile(re.escape(search), re.IGNORECASE)
+            query['$or'] = [
+                {'ticket_id': search_regex},
+                {'department': search_regex},
+                {'date': search_regex},
+                {'status': search_regex},
+            ]
+
+        sorted_support_tickets = db.support_ticket.find(query, display_fields).sort('createdAt', pymongo.DESCENDING)
+
+        paginator = Paginator(list(sorted_support_tickets), entry)
+        support_ticket_per_page = paginator.get_page(page)
+
+        support_tickets = []
+
+        for support_ticket in support_ticket_per_page:
+            support_ticket['_id'] = str(support_ticket['_id'])
+            support_ticket['comments'] = len(support_ticket['comments'])
+            support_tickets.append(support_ticket)
+
+        total_support_tickets = len(support_tickets)
+
+        data = {
+            'support_tickets': support_tickets,
+            'total_support_ticket': total_support_tickets,
+            'current_page': page
+        }
+
+        return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
+
+
+    
 
     
 

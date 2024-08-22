@@ -48,7 +48,7 @@ class CheckToken(generics.GenericAPIView):
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
             user_data = db.account_user.find_one({'_id': ObjectId(payload['id'])})
             data = {
-                'is_admin': user_data['is_admin']
+                'isAdmin': user_data['isAdmin']
             }
             return BaseResponse.response(status=True, message='token is valid', data=data, HTTP_STATUS=status.HTTP_200_OK)
         except Exception as e:
@@ -174,17 +174,17 @@ class LoginAccountUser(generics.GenericAPIView):
         
         if account_user['isSuspended'] == False:
 
-            if account_user['is_two_factor'] == True:
-                two_factor_code = Util.generate_number(4)
-                expire_at = datetime.utcnow() + timedelta(seconds=120)
-                db.otp_codes.insert_one({'user_id': account_user['_id'], 'code': two_factor_code, 'expireAt': expire_at})
-                data = {
-                    'subject': 'Two Factor Authentication',
-                    'to': account_user['email'],
-                    'body': f'Use this otp to verify your login {two_factor_code}'
-                }
-                Util.email_send(data)
-                return BaseResponse.response(status=True, message='check your email for 2fa code', HTTP_STATUS=status.HTTP_201_CREATED)
+            # if account_user['is_two_factor'] == True:
+            #     two_factor_code = Util.generate_number(4)
+            #     expire_at = datetime.utcnow() + timedelta(seconds=120)
+            #     db.otp_codes.insert_one({'user_id': account_user['_id'], 'code': two_factor_code, 'expireAt': expire_at})
+            #     data = {
+            #         'subject': 'Two Factor Authentication',
+            #         'to': account_user['email'],
+            #         'body': f'Use this otp to verify your login {two_factor_code}'
+            #     }
+            #     Util.email_send(data)
+            #     return BaseResponse.response(status=True, message='check your email for 2fa code', HTTP_STATUS=status.HTTP_201_CREATED)
 
             token = JWTAuthentication.create_jwt(account_user)
           
