@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import GetRegisteredUsers, FundAccount, GetTransactions, UpdateAccountProfile, GetVirtualCards, ActivateVirtualCard, GetUserDetail, AccountUserTransactions, DeleteTransaction,UpdateTransactionView, GetChequeDeposits, ApproveChequeDeposit, GetKYC, DeleteChequeDeposit, DeleteKYC, ApproveKYC, WireTransfer, GetTotalRegisteredUsers, GetTotalTransactions, GetTotalUnverifiedUsers, GetTotalChequeDeposits, GetChartData
+from .views import GetRegisteredUsers, FundAccount, GetTransactions, UpdateAccountProfile, GetVirtualCards, ActivateVirtualCard, GetUserDetail, AccountUserTransactions, DeleteTransaction,UpdateTransactionView, GetChequeDeposits, ApproveChequeDeposit, GetKYC, DeleteChequeDeposit, DeleteKYC, ApproveKYC, WireTransfer, GetTotalRegisteredUsers, GetTotalTransactions, GetTotalUnverifiedUsers, GetTotalChequeDeposits, GetChartData, GetCurrencyChartData, SendCustomEmail
 
 urlpatterns = [
     path('get_registered_users', GetRegisteredUsers.as_view(), name='get-registered-users'),
@@ -28,4 +28,6 @@ urlpatterns = [
     path('total_cheque_deposits', GetTotalChequeDeposits.as_view(), name='total-cheque-deposits'),
     path('total_transactions', GetTotalTransactions.as_view(), name='total-transactions'),
     path('get_chart_data', GetChartData.as_view(), name='get-chart-data'),
+    path('get_currency_users', GetCurrencyChartData.as_view(), name='get-currency-users'),
+    path('send_custom_email', SendCustomEmail.as_view(), name='send-custom-email'),
 ]

@@ -524,8 +524,44 @@ class GetCurrencyChartData(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
         user = request.user
-        query = {'account_manager_id': user['_id'], }
-        pass
+        query = {'account_manager_id': user['_id'],}
+        
+        pipeline = [
+                {'$match': query},
+                {'$group': {'_id': '$account_currency', 'total_users': {'$sum': 1}}}
+        ]
+
+        results = db.account_user.aggregate(pipeline)
+
+        new_results = []
+
+        for result in results:
+            if result['_id'] == None:
+                continue
+            new_results.append(result)
+
+        return BaseResponse.response(status=True, data=new_results, HTTP_STATUS=status.HTTP_200_OK)
+
+class SendCustomEmail(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        data = request.data
+
+        email_data = {
+            'subject': data['subject'],
+            'body': data['message'],
+            'to': data['email']
+        }
+
+        auth_util.email_send(email_data)
+
+        return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
+    
+
+    
+
+    
+
 
 
 
