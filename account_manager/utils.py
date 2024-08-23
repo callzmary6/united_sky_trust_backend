@@ -21,10 +21,10 @@ class Util:
     @staticmethod
     def send_custom_mail(data):
         email = EmailMessage(
-            subject= data['email_subject'],
+            subject= data['subject'],
             from_email = settings.EMAIL_HOST_USER,
-            to = [data['to_email']],
-            body = data['email_body'],
+            to = [data['to']],
+            body = data['body'],
         )
         email.content_subtype = 'html'
         email.send()
