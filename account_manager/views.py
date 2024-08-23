@@ -639,12 +639,14 @@ class GetComments(generics.GenericAPIView):
         user = request.user
         support_ticket = db.support_ticket.find_one({'account_manager_id': user['_id'], '_id': ObjectId(support_ticket_id)})
         
-        comment_obj = db.comments.find({'support_ticket_id': ObjectId(support_ticket_id), '_id': {'$in': support_ticket['comments']}}, {'support_ticket_id': 0, 'sender_id': 0, 'receiver_id': 0}).sort('createdAt', pymongo.ASCENDING)
+        comment_obj = db.comments.find({'support_ticket_id': ObjectId(support_ticket_id), '_id': {'$in': support_ticket['comments']}}, {'support_ticket_id': 0}).sort('createdAt', pymongo.ASCENDING)
 
         comments = []
 
         for comment in comment_obj:
             comment['_id'] = str(comment['_id'])
+            comment['sender_id'] = str(comment['sender_id'])
+            comment['receiver_id'] = str(comment['receiver_id'])
             comments.append(comment)
 
         data = {
