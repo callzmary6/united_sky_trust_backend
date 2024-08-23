@@ -310,7 +310,7 @@ class GetVirtualCards(generics.GenericAPIView):
     
 class ActivateVirtualCard(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
-    def post(self, request, vc_id):
+    def patch(self, request, vc_id):
         user = request.user
         status = 'Pending'
         query = {'_id': ObjectId(vc_id), 'account_manager_id': user['_id'], 'status': status}
@@ -553,7 +553,7 @@ class SendCustomEmail(generics.GenericAPIView):
             'to': data['email']
         }
 
-        auth_util.email_send(email_data)
+        manager_util.send_custom_mail(email_data)
 
         return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
     

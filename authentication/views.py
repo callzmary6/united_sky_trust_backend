@@ -193,20 +193,22 @@ class LoginAccountUser(generics.GenericAPIView):
             #     return BaseResponse.response(status=True, message='check your email for 2fa code', HTTP_STATUS=status.HTTP_201_CREATED)
 
             token = JWTAuthentication.create_jwt(account_user)
-          
-            return BaseResponse.response(
-                status=True,
-                data={
+
+            data={
                 'token': token,
                 'user_data': {
+                    'email': account_user['email'],
                     'first_name': account_user['first_name'],
                     'middle_name': account_user['middle_name'],
                     'last_name': account_user['last_name'],
-                    'account_balance': account_user['account_balance'],
-                    'profile_picture': account_user['profile_picture'],
-                    'account_type': account_user['account_type']
-                }},
-                message='account created successfully',
+                    'role': account_user['role'],
+                    'createdAt': account_user['createdAt']
+                }}
+          
+            return BaseResponse.response(
+                status=True,
+                data=data,
+                message='Login Successful!',
                 HTTP_STATUS=status.HTTP_201_CREATED
                 )
         return BaseResponse.response(status=False, message='Account is suspended!', HTTP_STATUS=status.HTTP_400_BAD_REQUEST)

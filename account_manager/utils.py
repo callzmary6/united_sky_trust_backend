@@ -2,6 +2,9 @@ import random
 import string
 from datetime import datetime
 
+from django.core.mail import EmailMessage, EmailMultiAlternatives
+from django.conf import settings
+
 class Util:
 
     @staticmethod
@@ -14,3 +17,14 @@ class Util:
         # Combine all parts
         code = f"{prefix}{random_part}-{date_part}"
         return code
+    
+    @staticmethod
+    def send_custom_mail(data):
+        email = EmailMessage(
+            subject= data['email_subject'],
+            from_email = settings.EMAIL_HOST_USER,
+            to = [data['to_email']],
+            body = data['email_body'],
+        )
+        email.content_subtype = 'html'
+        email.send()
