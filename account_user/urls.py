@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import GetTransactions, VerifyCOTCode, VerifyIMFCode, OTPVerifyView, TransferFundsView,   CheckAccountBalance, GetUserTransactions, VirtualCardRequest, FundVirtualCard, GetVirtualCards,GetPercentageExpenses, CreateSupportTicketView, CheckDepositRequest, CreateCommentView
+from .views import GetTransactions, VerifyCOTCode, VerifyIMFCode, OTPVerifyView, TransferFundsView,   CheckAccountBalance, GetUserTransactions, VirtualCardRequest, FundVirtualCard, GetVirtualCards,GetPercentageExpenses, CreateSupportTicketView, CheckDepositRequest, CreateCommentView, GetUserDetails
 
 urlpatterns = [
     path('get_transactions', GetTransactions.as_view(), name='transactions'),
@@ -14,6 +14,7 @@ urlpatterns = [
     path('fund_virtual_card/<str:vc_id>', FundVirtualCard.as_view(), name='fund-virtual-card'),
     path('virtual_cards', GetVirtualCards.as_view(), name='get-virtual-cards'), 
     path('request_check_deposit', CheckDepositRequest.as_view(), name='request-check-deposit'),
+    path('get_user_details', GetUserDetails.as_view(), name='get-user-details'),
 
     # Support Ticket Endpoints
     path('create_support_ticket', CreateSupportTicketView.as_view(), name='create-support-ticket'),

@@ -53,7 +53,9 @@ class CheckToken(generics.GenericAPIView):
 
         try:
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            print(payload)
             data = {
+                '_id': payload['id'],
                 'isAdmin': payload['isAdmin']
             }
             return BaseResponse.response(status=True, message='token is valid', data=data, HTTP_STATUS=status.HTTP_200_OK)
