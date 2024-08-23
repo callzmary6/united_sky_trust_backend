@@ -511,13 +511,63 @@ class GetChartData(generics.GenericAPIView):
 
         query = {'account_manager_id': user['_id'], 'createdAt': {'$gte': start_date, '$lte': end_date + datetime.timedelta(days=1)}}
 
-        transactions_this_week = db.transactions.count_documents(query)
-        users_this_week = db.account_user.count_documents(query)
+        # Aggregate the shipment by date
+        pipeline = [
+            {'$match': query},
+            {'$project': {"day": {"$dayOfWeek": "$createdAt"}, "date": {"$dateToString": {"format": "%Y-%m-%d", "date": "$createdAt"}}}},
+            {"$group": {"_id": {"day": "$day", "date": "$date"}, "count": {"$sum": 1}}},
+            {"$sort": {"_id.date": 1}}
+        ]
+
+        transactions = list(db.transactions.aggregate(pipeline))
+        cheque_deposits = list(db.cheque_deposits.aggregate(pipeline))
+
+        # Format the result
+        days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+        transactions_this_week = []
+        cheque_deposits_this_week = []
+
+        day_count_1 = {(start_date + datetime.timedelta(days=i)).strftime('%Y-%m-%d'): 0 for i in range(7)}
+        day_count_2 = {(start_date + datetime.timedelta(days=i)).strftime('%Y-%m-%d'): 0 for i in range(7)}
+
+
+        for transaction in transactions:
+            date_str = transaction['_id']['date']
+            day_count_1[date_str] = transaction['count']
+
+        for deposit in cheque_deposits:
+            date_str = deposit['_id']['date']
+            day_count_2[date_str] = deposit['count']
+
+        for date_str, count in day_count_1.items():
+            date = datetime.datetime.strptime(date_str, '%Y-%m-%d')
+            day_index = (date.weekday() + 1) % 7
+            day_name = days[day_index]
+            formatted_result = {
+                "day": day_name,
+                "date": date.strftime("%d/%m/%Y"),
+                "no_of_transactions": count
+            }
+            transactions_this_week.append(formatted_result)
+        
+        for date_str, count in day_count_2.items():
+            date = datetime.datetime.strptime(date_str, '%Y-%m-%d')
+            day_index = (date.weekday() + 1) % 7
+            day_name = days[day_index]
+            formatted_result = {
+                "day": day_name,
+                "date": date.strftime("%d/%m/%Y"),
+                "no_of_users": count
+            }
+            cheque_deposits_this_week.append(formatted_result)
+
 
         data = {
             'transactions_this_week': transactions_this_week,
-            'users_this_week': users_this_week
+            'cheque_deposits_this_week': cheque_deposits_this_week,
         }
+
         return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
     
 class GetCurrencyChartData(generics.GenericAPIView):
