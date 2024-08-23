@@ -16,6 +16,9 @@ from cloudinary.uploader import upload
 from datetime import datetime, timedelta
 import jwt
 
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
+from drf_spectacular.types import OpenApiTypes
+
 db = settings.DB
             
 class Transactions:
@@ -23,10 +26,14 @@ class Transactions:
     def get_all_transactions():
         return list(db.transactions.find({}, {'_id': 0}))
     
-
+@extend_schema(
+    request=AccountManagerSerializer,
+    responses={201: AccountManagerSerializer, 400:''}
+)
 class RegisterAccountManager(generics.GenericAPIView):
+    serializer_class = AccountManagerSerializer
     def post(self, request):
-        serializer = AccountManagerSerializer(data=request.data)
+        serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             serializer.save()
 
@@ -46,9 +53,8 @@ class CheckToken(generics.GenericAPIView):
 
         try:
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            user_data = db.account_user.find_one({'_id': ObjectId(payload['id'])})
             data = {
-                'isAdmin': user_data['isAdmin']
+                'isAdmin': payload['isAdmin']
             }
             return BaseResponse.response(status=True, message='token is valid', data=data, HTTP_STATUS=status.HTTP_200_OK)
         except Exception as e:
