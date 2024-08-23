@@ -558,7 +558,7 @@ class GetChartData(generics.GenericAPIView):
             formatted_result = {
                 "day": day_name,
                 "date": date.strftime("%d/%m/%Y"),
-                "no_of_users": count
+                "no_of_cheque_deposits": count
             }
             cheque_deposits_this_week.append(formatted_result)
 
