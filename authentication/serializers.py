@@ -97,11 +97,11 @@ class AccountUserSerializer(serializers.Serializer):
         validated_data['role'] = 'User'
         validated_data['profile_picture'] = ''
 
-        # if db.account_user.find_one({'email': email}):
-        #     raise serializers.ValidationError({'error': {'email': 'Email is already in use!'}})
+        if db.account_user.find_one({'email': email}):
+            raise serializers.ValidationError({'error': {'email': 'Email is already in use!'}})
         
-        # if db.account_user.find_one({'phone_number': phone_number}):
-        #     raise serializers.ValidationError({'error':{'phone_number': 'Phone number is already in use!'}})
+        if db.account_user.find_one({'phone_number': phone_number}):
+            raise serializers.ValidationError({'error':{'phone_number': 'Phone number is already in use!'}})
         
         return db.account_user.insert_one(validated_data)
     
