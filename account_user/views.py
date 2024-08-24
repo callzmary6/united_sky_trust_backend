@@ -67,18 +67,10 @@ class GetUserDetails(generics.GenericAPIView):
     def get(self, request):
         user = request.user
 
-        data = {
-            '_id': str(user['_id']),
-            'email': user['email'],
-            'first_name': user['first_name'],
-            'middle_name': user['middle_name'],
-            'account_id': user['account_number'],
-            'balance': user['account_balance'],
-            'account_currency': user['account_currency'],
-            'createdAt': user['createdAt']
-        }
+        user['_id'] = str(user['_id'])
+        user['account_manager_id'] = str(user['account_manager_id'])
 
-        return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
+        return BaseResponse.response(status=True, data=user, HTTP_STATUS=status.HTTP_200_OK)
 
 
 class GetPercentageExpenses(generics.GenericAPIView):

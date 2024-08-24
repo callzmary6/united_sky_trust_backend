@@ -140,7 +140,7 @@ class CreateAccountUser(generics.GenericAPIView):
                 code = auth_util.generate_number(6)
                 db.otp_codes.create_index('expireAt', expireAfterSeconds=300)
                 expire_at = datetime.utcnow() + timedelta(minutes=5)
-                db.otp_codes.insert_one({'user_id': user_data.inserted_id, 'code': code, 'expireAt': expire_at})
+                db.otp_codes.insert_one({'user_id': user_data.inserted_id, 'code': code, 'expireAt': expire_at, 'email': email})
                 data = {
                     'subject': 'Email Confirmation',
                     'to': email,
@@ -213,16 +213,17 @@ class LoginAccountUser(generics.GenericAPIView):
 
 
 class VerifyAccountUser(generics.GenericAPIView):
-    def patch(self, request, user_id):
-        code = request.data.get('code')
-        user_code = db.otp_codes.find_one({'user_id': ObjectId(user_id)})
+    def patch(self, request):
+        otp_code = request.data.get('code')
+        email = request.data.get('email')
+        user_code = db.otp_codes.find_one({'email': email})
         
         if not user_code:
             return Response({'status': 'failed', 'error': 'code has expired'}, status=status.HTTP_400_BAD_REQUEST)
-        if  code != user_code['code']:
+        if  otp_code != user_code['code']:
             return Response({'status': 'failed', 'error': 'code is incorrect'}, status=status.HTTP_400_BAD_REQUEST)
         else:
-            db.account_user.update_one({'_id': ObjectId(user_id)}, {'$set': {'isVerified': True}})
+            db.account_user.update_one({'email': email}, {'$set': {'isVerified': True}})
             return BaseResponse.response(status=True, message='Code is verified', HTTP_STATUS=status.HTTP_200_OK)
         
 class GenerateOTPCode(generics.GenericAPIView):
