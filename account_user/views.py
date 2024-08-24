@@ -294,6 +294,8 @@ class VirtualCardRequest(generics.GenericAPIView):
         # use sessions here
 
         serializer.validated_data['virtualcard_user_id'] = user['_id']
+        serializer.validated_data['phone_number'] = user['phone_number']
+        serializer.validated_data['email'] = user['email']
         serializer.validated_data['account_manager_id'] = account_manager['_id']
         serializer.validated_data['first_name'] = user['first_name']
         serializer.validated_data['middle_name'] = user['middle_name']

@@ -214,7 +214,7 @@ class LoginAccountUser(generics.GenericAPIView):
 
 class VerifyAccountUser(generics.GenericAPIView):
     def patch(self, request):
-        otp_code = request.data.get('code')
+        otp_code = request.data.get('otp_code')
         email = request.data.get('email')
         user_code = db.otp_codes.find_one({'email': email})
         
