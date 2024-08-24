@@ -4,10 +4,10 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 
 from authentication.permissions import IsAuthenticated
-from authentication.utils import Util
+from authentication.utils import Util as auth_util
 from account_manager.utils import Util as manager_util
 
-from .serializers import TransferSerializer, VirtualCardSerializer, FundVirtualCardSerializer, SupportTicketSerializer, ChequeDepositSerializer, CommentSerializer
+from .serializers import TransferSerializer, VirtualCardSerializer, FundVirtualCardSerializer, SupportTicketSerializer, ChequeDepositSerializer, CommentSerializer, RealCardSerializer
 from .utils import Util as user_util
 from united_sky_trust.base_response import BaseResponse
 
@@ -29,7 +29,7 @@ responses = {
 class AccountManager:
     @staticmethod
     def get_account_manager():
-        return db.account_user.find_one({'is_admin': True})
+        return db.account_user.find_one({'isAdmin': True})
 
 
 class GetTransactions(generics.GenericAPIView):
@@ -128,7 +128,7 @@ class VerifyIMFCode(generics.GenericAPIView):
         imf_code = request.data.get('imf_code', '')
         user_data = db.account_user.find_one({'_id': user_id})
 
-        otp = Util.generate_number(6)
+        otp = auth_util.generate_number(6)
 
         if imf_code == user_data['imf_code']:
             db.account_user.update_one({'_id': user_id}, {'$set': {'is_verified_imf': True}})
@@ -137,7 +137,7 @@ class VerifyIMFCode(generics.GenericAPIView):
                 'body': f'{otp}',
                 'to': user_data['email']
             }
-            Util.email_send(data)
+            auth_util.email_send(data)
             expire_at = datetime.now() + timedelta(seconds=300)
             db.otp_codes.insert_one({'_id': uuid.uuid4().hex[:24], 'user_id': user_data['_id'], 'code': otp, 'expireAt': expire_at})
             return Response({'status': 'success', 'message': 'cot code verified successfully, An otp has been sent to your email!'}, status=responses['success'])
@@ -267,13 +267,13 @@ class TransferFundsView(generics.GenericAPIView):
         return Response({'status': 'failed', 'error': 'codes not verified'}, status=responses['failed'])
 
 
-class GetUserTransactions(generics.GenericAPIView):
+class GetAccountSummary(generics.GenericAPIView):
     permission_classes = [IsAuthenticated,]
 
     def get(self, request):
         user = request.user
 
-        query = {'transaction_user_id': str(user['_id'])}
+        query = {'transaction_user_id': user['_id']}
         filter = {'_id': 1, 'ref_number': 1, 'amount': 1, 'status': 1, 'type': 1, 'description': 1, 'scope': 1, 'createdAt': 1}
 
         sorted_transaction = db.transactions.find(query, filter).sort('createdAt', pymongo.DESCENDING)
@@ -292,7 +292,7 @@ class GetUserTransactions(generics.GenericAPIView):
         return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
     
 class VirtualCardRequest(generics.GenericAPIView):
-    permission_classes = [IsAuthenticated, ]
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         user = request.user
         serializer = VirtualCardSerializer(data=request.data)
@@ -303,18 +303,27 @@ class VirtualCardRequest(generics.GenericAPIView):
 
         serializer.validated_data['virtualcard_user_id'] = user['_id']
         serializer.validated_data['account_manager_id'] = account_manager['_id']
-        serializer.validated_data['card_holder_name'] = f"{user['first_name']} {user['middle_name']} {user['last_name']}"
+        serializer.validated_data['first_name'] = user['first_name']
+        serializer.validated_data['middle_name'] = user['middle_name']
+        serializer.validated_data['last_name'] = user['last_name']
+        prefix = serializer.check_card_type(serializer.validated_data['card_type'].lower())  
+        serializer.validated_data['createdAt'] = datetime.now()
+        serializer.validated_data['card_number'] = user_util.generate_card_number(12, prefix)
+        serializer.validated_data['cvv'] = auth_util.generate_number(3)
+        serializer.validated_data['valid_through'] = serializer.validated_data['createdAt'] + timedelta(days=1095)
+        serializer.validated_data['status'] = 'Pending'
         virtual_card_data = serializer.save()
 
-        virtual_card = db.virtual_cards.find_one({'_id': virtual_card_data.inserted_id})
+        # virtual_card = db.virtual_cards.find_one({'_id': virtual_card_data.inserted_id})
 
         data = {
-            'card_type': virtual_card['card_type'],
-            'card_number': virtual_card['card_number'],
-            'valid_through': virtual_card['valid_through'],
-            'cvv': virtual_card['cvv'],
-            'balance': virtual_card['balance'],
-            'status': virtual_card['status']
+            '_id': str(virtual_card_data.inserted_id),
+            'card_type': serializer.validated_data['card_type'],
+            'card_number': serializer.validated_data['card_number'],
+            'valid_through': serializer.validated_data['valid_through'],
+            'cvv': serializer.validated_data['cvv'],
+            'balance': serializer.validated_data['balance'],
+            'status': serializer.validated_data['status']
         }
 
         return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
@@ -430,25 +439,21 @@ class CreateCommentView(generics.GenericAPIView):
         return BaseResponse.response(status=True, message='Reply sent!', HTTP_STATUS=status.HTTP_200_OK)
 
     
-class CheckDepositRequest(generics.GenericAPIView):
+class ChequeDepositRequest(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = ChequeDepositSerializer
     def post(self, request):
         user = request.user
         account_manager = AccountManager.get_account_manager()
         data = request.data
-        front_cheque = request.FILES['front_cheque']
-        back_cheque = request.FILES['back_cheque']
-
+        
         serializer = self.serializer_class(data=data)
         serializer.is_valid(raise_exception=True)
-        front_cheque_data = upload(front_cheque, folder='cheques')
-        back_cheque_data = upload(back_cheque,folder='cheques')
 
-        serializer.validated_data['front_cheque'] = front_cheque_data['secure_url']
-        serializer.validated_data['back_cheque'] = back_cheque_data['secure_url']
-        serializer.validated_data['account_holder'] = f"{user['first_name']} {user['middle_name']} {user['last_name']}"
-        serializer.validated_data['cheque_deposit_user_id'] = user['_id']
+        serializer.validated_data['first_name'] = user['first_name']
+        serializer.validated_data['middle_name'] = user['middle_name']
+        serializer.validated_data['last_name'] = user['last_name']
+        serializer.validated_data['cheque_user_id'] = user['_id']
         serializer.validated_data['account_manager_id'] = account_manager['_id']
         serializer.validated_data['ref_number'] = manager_util.generate_code()
         serializer.validated_data['createdAt'] = datetime.now()
@@ -469,6 +474,23 @@ class CheckDepositRequest(generics.GenericAPIView):
         })
 
         return BaseResponse.response(status=True, message='Check request pending', HTTP_STATUS=status.HTTP_200_OK)
+    
+class LinkRealCard(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = RealCardSerializer
+
+    def post(self, request):
+        user = request.user
+        data = request.data
+        account_manager = AccountManager.get_account_manager()
+
+        serializer = self.serializer_class(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.validated_data['card_user_id'] = user['_id']
+        serializer.validated_data['account_manager_id'] = account_manager['_id']
+        serializer.save()
+
+        return BaseResponse.response(status=True, message='Card linked!', HTTP_STATUS=status.HTTP_200_OK)
     
 
 

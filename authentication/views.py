@@ -8,7 +8,7 @@ from .serializers import AccountManagerSerializer, LoginAdminSerializer, Account
 
 from .authentications import JWTAuthentication
 from .permissions import IsAuthenticated
-from .utils import Util
+from .utils import Util as auth_util
 from united_sky_trust.base_response import BaseResponse
 
 from bson import ObjectId
@@ -25,6 +25,11 @@ class Transactions:
     @staticmethod
     def get_all_transactions():
         return list(db.transactions.find({}, {'_id': 0}))
+    
+class AccountManager:
+    @staticmethod
+    def get_account_manager():
+        return db.account_user.find_one({'isAdmin': True})
     
 @extend_schema(
     request=AccountManagerSerializer,
@@ -117,42 +122,33 @@ class LoginAccountManager(generics.GenericAPIView):
 
 class CreateAccountUser(generics.GenericAPIView):
     serializer_class = AccountUserSerializer
-    # permission_classes = [IsAuthenticated,]
     def post(self, request):
         data = request.data
         user = request.user
-        # if isinstance(user, AnonymousUser):
-        #     user = db.account_user.find_one({'is_admin': True})
-        profile_picture = request.data.get('profile_picture')
+        if isinstance(user, AnonymousUser):
+            isAnonymous = True
+            user = AccountManager.get_account_manager()
+
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
+            email = serializer.validated_data['email']
             serializer.validated_data['account_manager_id'] = user['_id']
-            # upload_result = upload(profile_picture)
-            # serializer.validated_data['profile_picture'] = upload_result['secure_url']
             user_data = serializer.save()
 
-            # Email Functionality
-            # code = Util.generate_number(6)
-            # db.otp_codes.create_index('expireAt', expireAfterSeconds=120)
-            # expire_at = datetime.now() + timedelta(seconds=120)
-            # db.otp_codes.insert_one({'user_id': user_data['_id'], 'code': code, 'expireAt': expire_at})
-            # data = {
-            #     'subject': 'Email Confirmation',
-            #     'to': user_data['email'],
-            #     'body': f'Use this otp to verify your account {code}'
-            # }
-            # Util.email_send(data)
-
-            data = {
-                'user_data': {
-                    'email': user_data['email'],
-                    'first_name': user_data['first_name'],
-                    'account_number': user_data['account_number'],
-                    'profile_picture': user_data['profile_picture']
+            if isAnonymous == True:
+                # Email Functionality
+                code = auth_util.generate_number(6)
+                db.otp_codes.create_index('expireAt', expireAfterSeconds=300)
+                expire_at = datetime.utcnow() + timedelta(minutes=5)
+                db.otp_codes.insert_one({'user_id': user_data.inserted_id, 'code': code, 'expireAt': expire_at})
+                data = {
+                    'subject': 'Email Confirmation',
+                    'to': email,
+                    'body': f'Use this otp to verify your account {code}'
                 }
-            }
+                auth_util.email_send(data)
 
-            return BaseResponse.response(status=True, message='account created successfully', data=data, HTTP_STATUS=status.HTTP_201_CREATED)
+            return BaseResponse.response(status=True, message='account created successfully', HTTP_STATUS=status.HTTP_201_CREATED)
 
         return BaseResponse.response(status=False, message=serializer.errors, HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
     
@@ -217,9 +213,9 @@ class LoginAccountUser(generics.GenericAPIView):
 
 
 class VerifyAccountUser(generics.GenericAPIView):
-    def post(self, request, user_id):
+    def patch(self, request, user_id):
         code = request.data.get('code')
-        user_code = db.otp_codes.find_one({'user_id': user_id})
+        user_code = db.otp_codes.find_one({'user_id': ObjectId(user_id)})
         
         if not user_code:
             return Response({'status': 'failed', 'error': 'code has expired'}, status=status.HTTP_400_BAD_REQUEST)
@@ -230,17 +226,17 @@ class VerifyAccountUser(generics.GenericAPIView):
             return BaseResponse.response(status=True, message='Code is verified', HTTP_STATUS=status.HTTP_200_OK)
         
 class GenerateOTPCode(generics.GenericAPIView):
-    def get(self, request, user_id, no_otp):
-        user_data = db.account_user.find_one({'_id': user_id})
-        code = Util.generate_number(int(no_otp))
-        expire_at = datetime.utcnow() + timedelta(seconds=120)
+    def get(self, request, user_id):
+        user_data = db.account_user.find_one({'_id': ObjectId(user_id)})
+        code = auth_util.generate_number(6)
+        expire_at = datetime.utcnow() + timedelta(minutes=5)
         db.otp_codes.insert_one({'user_id': user_data['_id'], 'code': code, 'expireAt': expire_at})
         data = {
             'subject': 'Verification code',
             'to': user_data['email'],
             'body': f'Use this otp to verify your account {code}'
         }
-        Util.email_send(data)
+        auth_util.email_send(data)
         return BaseResponse.response(status=True, message='otp has been sent to your email', HTTP_STATUS=status.HTTP_200_OK)
 
 

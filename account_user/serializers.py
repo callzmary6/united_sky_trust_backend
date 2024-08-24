@@ -27,19 +27,21 @@ class TransferSerializer(serializers.Serializer):
 
 
 class VirtualCardSerializer(serializers.Serializer):
-    virtualcard_user_id = serializers.UUIDField(read_only=True)
-    account_manager_id = serializers.UUIDField(read_only=True)
-    card_holder_name = serializers.CharField(max_length=255, read_only=True)
+    virtualcard_user_id = serializers.CharField(read_only=True)
+    account_manager_id = serializers.CharField(read_only=True)
+    first_name = serializers.CharField(read_only=True)
+    middle_name = serializers.CharField(read_only=True)
+    last_name = serializers.CharField(read_only=True)
     card_number = serializers.CharField(max_length=100, read_only=True)
     cvv = serializers.CharField(max_length=3, min_length=3, read_only=True)
     valid_through = serializers.DateTimeField(read_only=True)
     balance = serializers.FloatField(default=0.00)
-    phone_number = serializers.CharField(max_length=20)
-    email_address = serializers.EmailField()
+    phone_number = serializers.CharField()
+    email = serializers.EmailField()
     address = serializers.CharField()
     security_question = serializers.CharField()
     answer = serializers.CharField()
-    status = serializers.CharField(default='pending')
+    status = serializers.CharField(default='Pending')
     card_type = serializers.CharField()
     createdAt = serializers.DateTimeField(read_only=True)
 
@@ -53,23 +55,10 @@ class VirtualCardSerializer(serializers.Serializer):
         else:
             raise serializers.ValidationError({'card_type': 'please enter a valid card type'})
 
-
-
     def create(self, validated_data):
-        validated_data['card_type'] = validated_data['card_type'].lower()
-
-        prefix = self.check_card_type(validated_data['card_type'])  
-
-        validated_data['createdAt'] = datetime.now()
-        validated_data['card_number'] = user_util.generate_card_number(12, prefix)
-        validated_data['cvv'] = auth_util.generate_number(3)
-        validated_data['valid_through'] = validated_data['createdAt'] + timedelta(days=1095)
-        validated_data['status'] = 'Pending'
-
         return db.virtual_cards.insert_one(validated_data)
     
 class FundVirtualCardSerializer(serializers.Serializer):
-    _id = serializers.UUIDField(default=uuid.uuid4().hex[:24])
     amount = serializers.FloatField()
     security_answer = serializers.CharField()
 
@@ -100,8 +89,8 @@ class SupportTicketSerializer(serializers.Serializer):
 
 class ChequeDepositSerializer(serializers.Serializer):
     cheque_amount = serializers.FloatField()
-    front_cheque = serializers.ImageField()
-    back_cheque = serializers.ImageField()
+    cheque_front = serializers.CharField()
+    cheque_back = serializers.CharField()
     first_name = serializers.CharField(read_only=True)
     middle_name = serializers.CharField(read_only=True)
     last_name = serializers.CharField(read_only=True)
@@ -116,6 +105,21 @@ class ChequeDepositSerializer(serializers.Serializer):
         validated_data['status'] = 'Pending'
         validated_data['cheque_number'] = auth_util.generate_number(9)
         return db.cheque_deposits.insert_one(validated_data)
+    
+
+class RealCardSerializer(serializers.Serializer):
+    name_on_card = serializers.CharField()
+    card_number = serializers.CharField()
+    card_month = serializers.CharField()
+    card_year = serializers.CharField()
+    cvv = serializers.CharField()
+    card_user_id = serializers.CharField(read_only=True)
+    account_manager_id = serializers.CharField(read_only=True)
+    createdAt = serializers.DateTimeField(read_only=True)
+
+    def create(self, validated_data):
+        validated_data['createdAt'] = datetime.now()
+        return db.real_cards.insert_one(validated_data)
         
 
         

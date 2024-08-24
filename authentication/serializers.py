@@ -82,9 +82,8 @@ class AccountUserSerializer(serializers.Serializer):
     isTransferBlocked = serializers.BooleanField(default=True)
     isAdmin = serializers.BooleanField(default=False)
     role = serializers.CharField(read_only=True)
-    annual_income_range = serializers.CharField(read_only=True)
-    ssn = serializers.CharField(read_only=True)
-    occupation = serializers.CharField(read_only=True)
+    annual_income_range = serializers.CharField(default='')
+    occupation = serializers.CharField(default='')
     profile_picture = serializers.URLField(default='')
     is_verified_cot = serializers.BooleanField(default=False)
     is_verified_imf = serializers.BooleanField(default=False)
@@ -94,9 +93,6 @@ class AccountUserSerializer(serializers.Serializer):
     def create(self, validated_data):
         email = validated_data['email']
         phone_number = validated_data['phone_number']
-        validated_data['occupation'] = ''
-        validated_data['ssn'] = ''
-        validated_data['annual_income_range'] = ''
         validated_data['account_number'] = Util.generate_number(11)
         validated_data['role'] = 'User'
         validated_data['profile_picture'] = ''
@@ -107,8 +103,7 @@ class AccountUserSerializer(serializers.Serializer):
         if db.account_user.find_one({'phone_number': phone_number}):
             raise serializers.ValidationError({'error':{'phone_number': 'Phone number is already in use!'}})
         
-        db.account_user.insert_one(validated_data)
-        return validated_data
+        return db.account_user.insert_one(validated_data)
     
 class PasswordResetSerializer(serializers.Serializer):
     old_password = serializers.CharField(write_only=True)

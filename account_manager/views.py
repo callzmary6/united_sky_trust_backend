@@ -79,10 +79,14 @@ class GetUserDetail(generics.GenericAPIView):
     def get(self, request, id):
         account_manager = request.user
         except_fields = {'password': 0, 'is_verified_cot': 0, 'is_verified_imf': 0, 'is_verified_otp': 0, 'is_authenticated': 0, 'full_name': 0}
-        account_user = db.account_user.find_one({'_id': ObjectId(id), 'account_manager_id': str(account_manager['_id'])}, except_fields)
+        account_user = db.account_user.find_one({'_id': ObjectId(id), 'account_manager_id': account_manager['_id']}, except_fields)
+
         if account_user is None:
             return BaseResponse.response(status=False, message='User does not exist!', HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
+        
         account_user['_id'] = str(account_user['_id'])
+        account_user['account_manager_id'] = str(account_user['account_manager_id'])
+
         return BaseResponse.response(status=True, data=account_user, HTTP_STATUS=status.HTTP_200_OK)
 
 
@@ -617,21 +621,28 @@ class CreateCommentView(generics.GenericAPIView):
         support_ticket = db.support_ticket.find_one({'account_manager_id': user['_id'], '_id': ObjectId(support_ticket_id)})
 
         old_comments = support_ticket['comments']
-        
-        comment = db.comments.insert_one({
+
+        insert_data = {
             'message': data['message'],
             'support_ticket_id': support_ticket['_id'],
             'sender_id': user['_id'],
             'receiver_id': ObjectId(support_ticket['support_user_id']),
             'comment_user_full_name': 'Customer Care',
             'createdAt': datetime.datetime.now()
-        })
+        }
+        
+        comment = db.comments.insert_one(insert_data)
 
         new_comments = old_comments + [comment.inserted_id]  
 
-        db.support_ticket.update_one({'_id': support_ticket['_id']}, {'$set': {'comments': new_comments}})
+        db.support_ticket.find_one_and_update({'_id': support_ticket['_id']}, {'$set': {'comments': new_comments}}, return_document=ReturnDocument.AFTER)
 
-        return BaseResponse.response(status=True, message='Reply sent!', HTTP_STATUS=status.HTTP_200_OK)
+        insert_data['_id'] = str(comment.inserted_id)
+        insert_data['support_ticket_id'] = str(insert_data['support_ticket_id'])
+        insert_data['sender_id'] = str(insert_data['sender_id'])
+        insert_data['receiver_id'] = str(insert_data['receiver_id'])
+
+        return BaseResponse.response(status=True, data=insert_data, message='Reply sent!', HTTP_STATUS=status.HTTP_200_OK)
     
 class GetComments(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
@@ -665,7 +676,7 @@ class GetSupportTicket(generics.GenericAPIView):
         search = request.GET.get('search', '')
 
         query = {'account_manager_id': user['_id']}
-        display_fields = {'_id': 1, 'department': 1, 'ticket_id': 1, 'createdAt': 1, 'comments': 1, 'status': 1}
+        display_fields = {'_id': 1, 'department': 1, 'ticket_id': 1, 'createdAt': 1, 'comments': 1, 'support_user_id': 1, 'status': 1}
 
         if search:
             search_regex = re.compile(re.escape(search), re.IGNORECASE)
@@ -686,6 +697,7 @@ class GetSupportTicket(generics.GenericAPIView):
         for support_ticket in support_ticket_per_page:
             support_ticket['_id'] = str(support_ticket['_id'])
             support_ticket['comments'] = len(support_ticket['comments'])
+            support_ticket['support_user_id'] = str(support_ticket['support_user_id'])
             support_tickets.append(support_ticket)
 
         total_support_tickets = len(support_tickets)
