@@ -491,6 +491,35 @@ class LinkRealCard(generics.GenericAPIView):
         serializer.save()
 
         return BaseResponse.response(status=True, message='Card linked!', HTTP_STATUS=status.HTTP_200_OK)
+
+class WireTransfer(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        user = request.user
+        data = request.data
+        account_manager = AccountManager.get_account_manager()
+        db.transactions.insert_one({
+            'type': 'Debit',
+            'amount': data['amount'],
+            'scope': 'Wire Transfer',
+            'description': data['description'],
+            # 'account_currency': data['currency'],
+            'transaction_user_id': user['_id'],
+            'account_manager_id': account_manager['_id'],
+            'account_holder': '',
+            'status': 'Completed',
+            'ref_number': manager_util.generate_code(),
+            'createdAt': datetime.now(),
+            'state_province': data['state_province'],
+            'recipient_full_name': data['recepient_full_name'],
+            'iban': data['iban'],
+            'swift_code': data['swift_code'],
+            'delivery_date': data['delivery_date'],
+            'wire_type': data['type'],
+            'delivery_data': data['delivery_date']
+        })
+
+        return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
     
 
 
