@@ -11,16 +11,15 @@ from authentication.utils import Util as auth_util
 db = settings.DB
 
 class TransferSerializer(serializers.Serializer):
-    _id = serializers.UUIDField(default=uuid.uuid4().hex[:24])
-    user_id = serializers.UUIDField()
-    account_manager_id = serializers.UUIDField()
+    user_id = serializers.CharField()
+    account_manager_id = serializers.CharField()
     amount = serializers.FloatField()
     bank_name = serializers.CharField()
     bank_routing_number = serializers.CharField()
     account_number = serializers.CharField()
     account_holder = serializers.CharField()
-    beneficiary_account_holder = serializers.CharField()
     description = serializers.CharField()
+    auth_pin = serializers.CharField()
     ref_number = serializers.CharField(default=manager_util.generate_code())
     status = serializers.CharField(read_only=True)
     createdAt = serializers.DateTimeField(read_only=True)
@@ -114,6 +113,24 @@ class RealCardSerializer(serializers.Serializer):
     card_year = serializers.CharField()
     cvv = serializers.CharField()
     card_user_id = serializers.CharField(read_only=True)
+    account_manager_id = serializers.CharField(read_only=True)
+    createdAt = serializers.DateTimeField(read_only=True)
+
+    def create(self, validated_data):
+        validated_data['createdAt'] = datetime.now()
+        return db.real_cards.insert_one(validated_data)
+    
+class KYCSerializer(serializers.Serializer):
+    first_name = serializers.CharField(read_only=True)
+    middle_name = serializers.CharField(read_only=True)
+    last_name = serializers.CharField(read_only=True)
+    email = serializers.CharField(read_only=True)
+    document = serializers.CharField()
+    front_image = serializers.CharField()
+    back_image = serializers.CharField()
+    ref_number = serializers.CharField()
+    status = serializers.CharField(default='Pending')
+    kyc_user_id = serializers.CharField(read_only=True)
     account_manager_id = serializers.CharField(read_only=True)
     createdAt = serializers.DateTimeField(read_only=True)
 

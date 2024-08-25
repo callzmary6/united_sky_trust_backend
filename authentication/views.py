@@ -137,8 +137,8 @@ class CreateAccountUser(generics.GenericAPIView):
 
             if account_user_email and account_user_email['isVerified'] == False and isAnonymous == True:
                 code = auth_util.generate_number(6)
-                db.otp_codes.create_index('expireAt', expireAfterSeconds=300)
-                expire_at = datetime.utcnow() + timedelta(minutes=5)
+                db.otp_codes.create_index('expireAt', expireAfterSeconds=1800)
+                expire_at = datetime.utcnow() + timedelta(minutes=30)
                 db.otp_codes.insert_one({'code': code, 'expireAt': expire_at, 'email': email})
                 data = {
                     'subject': 'Email Confirmation',
@@ -147,14 +147,13 @@ class CreateAccountUser(generics.GenericAPIView):
                 }
                 auth_util.email_send(data)
                 return BaseResponse.response(status=True, message='Account already exists, OTP has been sent to your email', HTTP_STATUS=status.HTTP_201_CREATED)
-
             user_data = serializer.save()
 
             if isAnonymous == True:
                 # Email Functionality
                 code = auth_util.generate_number(6)
-                db.otp_codes.create_index('expireAt', expireAfterSeconds=300)
-                expire_at = datetime.utcnow() + timedelta(minutes=5)
+                db.otp_codes.create_index('expireAt', expireAfterSeconds=1800)
+                expire_at = datetime.utcnow() + timedelta(minutes=30)
                 db.otp_codes.insert_one({'user_id': user_data.inserted_id, 'code': code, 'expireAt': expire_at, 'email': email})
                 data = {
                     'subject': 'Email Confirmation',

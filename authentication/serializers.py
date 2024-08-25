@@ -96,6 +96,7 @@ class AccountUserSerializer(serializers.Serializer):
         validated_data['account_number'] = Util.generate_number(11)
         validated_data['role'] = 'User'
         validated_data['profile_picture'] = ''
+        validated_data['createdAt'] = datetime.now()
 
         if db.account_user.find_one({'email': email}):
             raise serializers.ValidationError({'error': {'email': 'Email is already in use!'}})

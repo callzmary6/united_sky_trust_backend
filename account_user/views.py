@@ -12,9 +12,11 @@ from .utils import Util as user_util
 from united_sky_trust.base_response import BaseResponse
 
 from django.conf import settings
+from django.core.paginator import Paginator
 from cloudinary.uploader import upload
 import uuid
 import pymongo
+import re
 from bson import ObjectId
 from datetime import datetime
 
@@ -166,33 +168,34 @@ class TransferFundsView(generics.GenericAPIView):
     serializer_class = TransferSerializer
 
     def post(self, request):
-        user = request.user
+        sender = request.user
         data = request.data
-        
-        serializer = self.serializer_class(data=data, partial=True)
-        serializer.is_valid(raise_exception=True)
+        isFake = False
 
         # Gets the account_manager and sender
         account_manager = AccountManager.get_account_manager()
-        sender = db.account_user.find_one({'_id': user['_id']})
+ 
+        amount = data['amount']
+        account_number = data['account_number']
+        bank_name = data['bank_name']
+        bank_routing_number = data['bank_routing_number']
+        account_number = data['account_number']
+        account_holder = data['account_holder']
+        description = data['description']
+        auth_pin = data['auth_pin']
 
-        # Checks if the cot, imf and otp have been verified
-        if sender['is_verified_cot'] == True and sender['is_verified_imf'] == True and sender['is_verified_otp'] == True:
-            amount = serializer.validated_data['amount']
-            account_number = serializer.validated_data['account_number']
-
-            # start transactions for users 
+        # start transactions for users 
+        if auth_pin == sender['cot_code']:
             with client.start_session() as session:
                 with session.start_transaction():
                     sender_result = db.account_user.find_one_and_update({
-                        '_id': user['_id'], 'account_balance': {'$gte': amount}},
-                        {'$inc': {'account_balance': -amount}, '$set': {'is_verified_cot': False, 'is_verified_imf': False, 'is_verified_otp': False, 'last_balance_update_time': datetime.datetime.now()}},
+                        '_id': sender['_id'], 'account_balance': {'$gte': amount}},
+                        {'$inc': {'account_balance': -amount}, '$set': {'last_balance_update_time': datetime.now()}},
                         return_document=True,
                         session=session
                     )
 
-                    serializer.validated_data['ref_number'] = manager_util.generate_code()
-                    serializer.validated_data['createdAt'] = sender_result['last_balance_update_time']
+                    ref_number = manager_util.generate_code()
 
                     # send debit email and sms functionality
                     
@@ -200,63 +203,61 @@ class TransferFundsView(generics.GenericAPIView):
                         session.abort_transaction()
                         return Response({'status': 'failed', 'message': 'Insufficient Funds!'}, status=responses['failed'])
                     
+                    createdAt = sender_result['last_balance_update_time']
+                    
                     receiver_result = db.account_user.find_one_and_update(
                         {'account_number': account_number},
                         {'$inc': {'account_balance': amount}},
                         return_document= True,
                         session=session
                         )
-                    
-                    serializer.validated_data['beneficiary_account_holder'] = receiver_result['full_name']
+
 
                     # send credit email and sms functionality
                     
-                    if not receiver_result:
-                        session.abort_transaction()
-                        return Response({'status': 'failed', 'message': 'User not found!'}, status=responses['failed'])
-                    
+                    if receiver_result is None:
+                        isFake = True
+                        beneficiary_account_holder = account_holder
+                    else:
+                        beneficiary_account_holder = f"{receiver_result['first_name']} {receiver_result['middle_name']} {receiver_result['last_name']}"
+                        
                     # create transaction records
                     # Sender Transaction
                     db.transactions.insert_one({
-                        '_id': uuid.uuid4().hex[:24],
                         'type': 'Debit',
                         'amount': amount,
                         'scope': 'Local Transfer',
-                        'description': serializer.validated_data['description'],
-                        'frequency': 1,
-                        'account_user_id': user['_id'],
+                        'description': description,
+                        'account_user_id': sender['_id'],
                         'account_manager_id': account_manager['_id'],
-                        'account_holder': receiver_result['full_name'],
+                        'account_holder': beneficiary_account_holder,
                         'account_number': account_number,
                         'status': 'Completed',
-                        'ref_number': serializer.validated_data['ref_number'],
-                        'createdAt': serializer.validated_data['createdAt'],
-                        # 'bank_name': serializer.validated_data['bank_name'],
-                        'bank_routing_number': serializer.validated_data['bank_routing_number'],
-                        'beneficiary_account_holder': receiver_result['full_name']
+                        'ref_number': ref_number,
+                        'createdAt': createdAt,
+                        'bank_name': bank_name,
+                        'bank_routing_number': bank_routing_number,
                     }, session=session)
 
                     # Receiver Transaction
-                    db.transactions.insert_one({
-                        '_id': uuid.uuid4().hex[:24],
-                        'type': 'Credit',
-                        'amount': amount,
-                        'scope': 'Local Transfer',
-                        'description': serializer.validated_data['description'],
-                        'frequency': 1,
-                        'account_user_id': receiver_result['_id'],
-                        'account_manager_id': account_manager['_id'],
-                        'account_holder': user['full_name'],
-                        'account_number': sender_result['account_number'],
-                        # 'bank_name': '',
-                        'status': 'Completed',
-                        'ref_number': serializer.validated_data['ref_number'],
-                        'createdAt': serializer.validated_data['createdAt']
-                    }, session=session)
+                    if isFake == False:
+                        db.transactions.insert_one({
+                            'type': 'Credit',
+                            'amount': amount,
+                            'scope': 'Local Transfer',
+                            'description': description,
+                            'account_user_id': receiver_result['_id'],
+                            'account_manager_id': account_manager['_id'],
+                            'account_number': sender_result['account_number'],
+                            'bank_name': 'United Heritage Trust',
+                            'status': 'Completed',
+                            'ref_number': ref_number,
+                            'createdAt': createdAt
+                        }, session=session)
 
             return Response({'status': 'success', 'message': 'Transaction Successful'}, status=responses['success'])
         
-        return Response({'status': 'failed', 'error': 'codes not verified'}, status=responses['failed'])
+        return Response({'status': 'failed', 'error': 'Auth_pin is incorrect!'}, status=responses['failed'])
 
 
 class GetAccountSummary(generics.GenericAPIView):
@@ -264,21 +265,41 @@ class GetAccountSummary(generics.GenericAPIView):
 
     def get(self, request):
         user = request.user
+        entry = int(request.GET.get('entry', 10))
+        page = int(request.GET.get('page', 1))
+        search = request.GET.get('search', '')
 
         query = {'transaction_user_id': user['_id']}
-        filter = {'_id': 1, 'ref_number': 1, 'amount': 1, 'status': 1, 'type': 1, 'description': 1, 'scope': 1, 'createdAt': 1}
 
-        sorted_transaction = db.transactions.find(query, filter).sort('createdAt', pymongo.DESCENDING)
+        if search:
+            search_regex = re.compile(re.escape(search), re.IGNORECASE)
+            query['$or'] = [
+                {'ref_number': search_regex},
+                {'account_holder': search_regex},
+                {'amount': search_regex},
+                {'description': search_regex},
+                {'type': search_regex},
+                {'scope': search_regex},
+                {'status': search_regex},
+            ]
 
-        list_transactions = []
+        sorted_transactions = db.transactions.find(query, {'ref_number': 1, 'account_holder': 1, 'amount': 1, 'description': 1, 'type': 1, 'scope': 1, 'status': 1, 'createdAt': 1}).sort('createdAt', pymongo.DESCENDING)
 
-        for transaction in sorted_transaction:
-            transaction['_id']  = str(transaction['_id'])
-            list_transactions.append(transaction)
+        total_transactions = db.transactions.count_documents(query)
+
+        # paginate the transactions
+        paginator = Paginator(list(sorted_transactions), entry)
+        transactions_per_page = paginator.get_page(page)
+
+        new_transactions = []
+        for transaction in transactions_per_page:
+            transaction['_id'] = str(transaction['_id'])
+            new_transactions.append(transaction)
 
         data = {
-            'transactions': list_transactions,
-            'total_transactions': len(list_transactions)
+            'transactions': new_transactions,
+            'no_of_transactions': total_transactions,
+            'current_page': page
         }
 
         return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
