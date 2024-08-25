@@ -39,35 +39,35 @@ class DahsboardView(generics.GenericAPIView):
         pass
 
 
-class GetTransactions(generics.GenericAPIView):
-    permission_classes = [IsAuthenticated, ]
-    def get(self, request):
-        user = request.user
+# class GetTransactions(generics.GenericAPIView):
+#     permission_classes = [IsAuthenticated, ]
+#     def get(self, request):
+#         user = request.user
 
-        all_transactions = []
-        credit = []
-        debit = []
+#         all_transactions = []
+#         credit = []
+#         debit = []
 
-        transactions = db.transactions.find({'account_user_id': user['_id']})
+#         transactions = db.transactions.find({'transaction_user_id': user['_id']})
 
-        sorted_transactions = sorted(transactions, key=lambda x: x['createdAt'], reverse=True)
+#         sorted_transactions = sorted(transactions, key=lambda x: x['createdAt'], reverse=True)
 
-        for transaction in sorted_transactions:
-            all_transactions.append(transaction)
+#         for transaction in sorted_transactions:
+#             all_transactions.append(transaction)
 
-            if transaction['type'] == 'Credit':
-                credit.append(transaction)
-            if transaction['type'] == 'Debit':
-                debit.append(transaction)
+#             if transaction['type'] == 'Credit':
+#                 credit.append(transaction)
+#             if transaction['type'] == 'Debit':
+#                 debit.append(transaction)
 
-        return Response({
-            'status': 'success',
-            'transactions': {
-                'all': all_transactions,
-                'credit': credit,
-                'debit': debit,
-            },
-        }, status=responses['success'])
+#         return Response({
+#             'status': 'success',
+#             'transactions': {
+#                 'all': all_transactions,
+#                 'credit': credit,
+#                 'debit': debit,
+#             },
+#         }, status=responses['success'])
 
 class GetUserDetails(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
@@ -78,35 +78,7 @@ class GetUserDetails(generics.GenericAPIView):
         user['account_manager_id'] = str(user['account_manager_id'])
 
         return BaseResponse.response(status=True, data=user, HTTP_STATUS=status.HTTP_200_OK)
-
-
-class GetPercentageExpenses(generics.GenericAPIView):
-    permission_classes = [IsAuthenticated]
-    def get(self, request):
-        user = request.user
-        account_user_transactions = db.transactions.find({'account_user_id': user['_id']})
-
-        transactions = list(account_user_transactions)
-        total_expenses = len(transactions)
-        total_debit = 0
-        total_credit = 0
-
-        for transaction in transactions:
-            if transaction['type'].lower() == 'credit':
-                total_credit += 1
-            if transaction['type'].lower() == 'debit':
-                total_debit += 1
-
-        percentage_credit = float((total_credit / total_expenses) * 100)
-        percentage_debit = float((total_debit / total_expenses) * 100)
-
-        return Response({
-            'status': 'success',
-            'percentage_credit': percentage_credit,
-            'percentage_debit': percentage_debit,
-        }, status=responses['success'])
-
-    
+       
 class VerifyCOTCode(generics.GenericAPIView):
     def post(self, request):
         user_id = request.user['_id']
@@ -233,7 +205,7 @@ class TransferFundsView(generics.GenericAPIView):
                         'amount': amount,
                         'scope': 'Local Transfer',
                         'description': description,
-                        'account_user_id': sender['_id'],
+                        'transaction_user_id': sender['_id'],
                         'account_manager_id': account_manager['_id'],
                         'account_holder': beneficiary_account_holder,
                         'account_number': account_number,
@@ -251,7 +223,7 @@ class TransferFundsView(generics.GenericAPIView):
                             'amount': amount,
                             'scope': 'Local Transfer',
                             'description': description,
-                            'account_user_id': receiver_result['_id'],
+                            'transaction_user_id': receiver_result['_id'],
                             'account_manager_id': account_manager['_id'],
                             'account_number': sender_result['account_number'],
                             'bank_name': 'United Heritage Trust',
@@ -356,7 +328,7 @@ class FundVirtualCard(generics.GenericAPIView):
         serializer = FundVirtualCardSerializer(data=data)
         serializer.is_valid(raise_exception=True)
 
-        query = {'_id': vc_id, 'account_user_id': user['_id']}
+        query = {'_id': vc_id, 'virtualcard_user_id': user['_id']}
         virtual_card = db.virtual_cards.find_one(query)
         
         if virtual_card['is_activated'] == True:
@@ -388,7 +360,7 @@ class FundVirtualCard(generics.GenericAPIView):
                         'scope': 'VirtualCard Top-up',
                         'description': description,
                         'frequency': 1,
-                        'account_user_id': user['_id'],
+                        'transaction_user_id': user['_id'],
                         'account_manager_id': user['account_manager_id'],
                         'account_holder': user['full_name'],
                         'account_number': user['account_number'],
@@ -406,7 +378,7 @@ class GetVirtualCards(generics.GenericAPIView):
     def get(self, request):
         user = request.user
 
-        virtual_cards_data = db.virtual_cards.find({'account_user_id': user['_id']}, {'security_question': 0, 'answer': 0, 'account_user_id': 0, 'account_manager_id': 0, 'last_fund_time': 0}).sort('createdAt', pymongo.DESCENDING)
+        virtual_cards_data = db.virtual_cards.find({'virtualcard_user_id': user['_id']}, {'security_question': 0, 'answer': 0, 'virtualcard_user_id': 0, 'account_manager_id': 0, 'last_fund_time': 0}).sort('createdAt', pymongo.DESCENDING)
 
         virtual_cards = list(virtual_cards_data)
         total_cards = len(virtual_cards)
@@ -485,7 +457,7 @@ class ChequeDepositRequest(generics.GenericAPIView):
             'scope': 'Cheque Deposit',
             'cheque_id': cheque_data.inserted_id,
             'description': 'Mobile Cheque Deposit',
-            'account_user_id': user['_id'],
+            'transaction_user_id': user['_id'],
             'account_manager_id': user['account_manager_id'],
             'account_holder': f"{user['first_name']} {user['middle_name']} {user['last_name']}",
             'status': 'Pending',    
@@ -589,7 +561,7 @@ class GetPastDebitCredit(generics.GenericAPIView):
         end_date = datetime.now()
         start_date = end_date - timedelta(days=6)
 
-        query = {'account_user_id': user['_id'], 'createdAt': {'$gte': start_date, '$lte': end_date + timedelta(days=1)}}
+        query = {'transaction_user_id': user['_id'], 'createdAt': {'$gte': start_date, '$lte': end_date + timedelta(days=1)}}
 
         # Aggregate the shipment by date
         pipeline = [
@@ -649,6 +621,54 @@ class GetPastDebitCredit(generics.GenericAPIView):
         data = {
             'Credits': credits_this_week,
             'Debits': debits_this_week,
+        }
+
+        return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
+    
+class GetExpensesTotal(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user
+        account_user_transactions = db.transactions.find({'transaction_user_id': user['_id']})
+
+        transactions = list(account_user_transactions)
+
+        total_debit = 0
+        total_credit = 0
+
+        for transaction in transactions:
+            if transaction['type'].lower() == 'credit':
+                total_credit += 1
+            if transaction['type'].lower() == 'debit':
+                total_debit += 1
+
+        data = [
+            {
+                'type': 'Credit',
+                'count': total_credit,
+            },
+            {
+                'type': 'Debit',
+                'count': total_debit
+            }
+        ]
+
+        return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
+    
+class GetLastFiveTransactions(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user
+        sorted_transactions = db.transactions.find({'transaction_user_id': user['_id']}, {'transaction_user_id': 0, 'account_manager_id': 0}).sort('createdAt', pymongo.DESCENDING).limit(5)
+        
+        last_five_transactions = []
+
+        for transaction in sorted_transactions:
+            transaction['_id'] = str(transaction['_id'])
+            last_five_transactions.append(transaction)  
+
+        data = {
+            'last_five_transactions': last_five_transactions
         }
 
         return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)

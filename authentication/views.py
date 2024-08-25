@@ -58,7 +58,6 @@ class CheckToken(generics.GenericAPIView):
 
         try:
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            print(payload)
             data = {
                 '_id': payload['id'],
                 'isAdmin': payload['isAdmin']

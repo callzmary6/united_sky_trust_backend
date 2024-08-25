@@ -194,7 +194,7 @@ class AccountUserTransactions(generics.GenericAPIView):
         search = request.GET.get('search', '')
         user_id = str(user['_id'])
 
-        query = {'transaction_user_id': id, 'account_manager_id': user_id}
+        query = {'transaction_user_id': ObjectId(id), 'account_manager_id': user_id}
 
         if search:
             search_regex = re.compile(re.escape(search), re.IGNORECASE)

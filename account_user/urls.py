@@ -1,9 +1,8 @@
 from django.urls import path
-from .views import GetTransactions, VerifyCOTCode, VerifyIMFCode, OTPVerifyView, TransferFundsView,   CheckAccountBalance, GetAccountSummary, VirtualCardRequest, FundVirtualCard, GetVirtualCards,GetPercentageExpenses, CreateSupportTicketView, ChequeDepositRequest, CreateCommentView, GetUserDetails, LinkRealCard, WireTransfer, ApplyKYC, GetRealLInkedCards, GetPastDebitCredit
+from .views import VerifyCOTCode, VerifyIMFCode, OTPVerifyView, TransferFundsView,   CheckAccountBalance, GetAccountSummary, VirtualCardRequest, FundVirtualCard, GetVirtualCards,GetExpensesTotal, CreateSupportTicketView, ChequeDepositRequest, CreateCommentView, GetUserDetails, LinkRealCard, WireTransfer, ApplyKYC, GetRealLInkedCards, GetPastDebitCredit, GetLastFiveTransactions
 
 urlpatterns = [
-    path('get_transactions', GetTransactions.as_view(), name='transactions'),
-    path('percentage_expense', GetPercentageExpenses.as_view(), name='percentage-expense'),
+    # path('get_transactions', GetTransactions.as_view(), name='transactions'),
     path('verify_imf', VerifyIMFCode.as_view(), name='verify-imf'),
     path('verify_cot', VerifyCOTCode.as_view(), name='verify-cot'),
     path('verify_otp', OTPVerifyView.as_view(), name='verify-otp'),
@@ -24,5 +23,7 @@ urlpatterns = [
 
     path('link_card', LinkRealCard.as_view(), name='link-real-card'),
     path('get_real_cards', GetRealLInkedCards.as_view(), name='get-real-linked-cards'),
-    path('get_past_expenses', GetPastDebitCredit.as_view(), name='get-past-expense')
+    path('get_past_expenses', GetPastDebitCredit.as_view(), name='get-past-expense'),
+    path('expenses_total', GetExpensesTotal.as_view(), name='get-total-expenses'),
+    path('last_five_transactions', GetLastFiveTransactions.as_view(), name='get-last-five-transactions')
 ]
