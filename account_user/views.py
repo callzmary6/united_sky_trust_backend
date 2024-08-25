@@ -668,7 +668,7 @@ class GetLastFiveTransactions(generics.GenericAPIView):
             last_five_transactions.append(transaction)  
 
         data = {
-            'last_five_transactions': last_five_transactions
+            'last_five_transaction': last_five_transactions
         }
 
         return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
