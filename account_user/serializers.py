@@ -125,18 +125,19 @@ class KYCSerializer(serializers.Serializer):
     middle_name = serializers.CharField(read_only=True)
     last_name = serializers.CharField(read_only=True)
     email = serializers.CharField(read_only=True)
-    document = serializers.CharField()
+    kyc_document = serializers.CharField()
     front_image = serializers.CharField()
     back_image = serializers.CharField()
-    ref_number = serializers.CharField()
+    ref_number = serializers.CharField(read_only=True)
     status = serializers.CharField(default='Pending')
     kyc_user_id = serializers.CharField(read_only=True)
     account_manager_id = serializers.CharField(read_only=True)
     createdAt = serializers.DateTimeField(read_only=True)
 
     def create(self, validated_data):
+        validated_data['ref_number'] = manager_util.generate_code()
         validated_data['createdAt'] = datetime.now()
-        return db.real_cards.insert_one(validated_data)
+        return db.kyc.insert_one(validated_data)
         
 
         

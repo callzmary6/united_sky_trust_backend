@@ -7,7 +7,7 @@ from authentication.permissions import IsAuthenticated
 from authentication.utils import Util as auth_util
 from account_manager.utils import Util as manager_util
 
-from .serializers import TransferSerializer, VirtualCardSerializer, FundVirtualCardSerializer, SupportTicketSerializer, ChequeDepositSerializer, CommentSerializer, RealCardSerializer
+from .serializers import TransferSerializer, VirtualCardSerializer, FundVirtualCardSerializer, SupportTicketSerializer, ChequeDepositSerializer, CommentSerializer, RealCardSerializer, KYCSerializer
 from .utils import Util as user_util
 from united_sky_trust.base_response import BaseResponse
 
@@ -535,6 +535,28 @@ class WireTransfer(generics.GenericAPIView):
         })
 
         return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
+    
+class ApplyKYC(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = KYCSerializer
+
+    def post(self, request):
+        user = request.user
+        data = request.data
+        account_manager = AccountManager.get_account_manager()
+
+        serializer = self.serializer_class(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.validated_data['kyc_user_id'] = user['_id']
+        serializer.validated_data['first_name'] = user['first_name']
+        serializer.validated_data['middle_name'] = user['middle_name']
+        serializer.validated_data['last_name'] = user['last_name']
+        serializer.validated_data['email'] = user['email']
+
+        serializer.validated_data['account_manager_id'] = account_manager['_id']
+        serializer.save()
+
+        return BaseResponse.response(status=True, message='Kyc applied successfully!', HTTP_STATUS=status.HTTP_200_OK)
     
 
 
