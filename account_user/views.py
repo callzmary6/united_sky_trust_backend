@@ -18,7 +18,7 @@ import uuid
 import pymongo
 import re
 from bson import ObjectId
-from datetime import datetime
+
 
 db = settings.DB
 client = settings.MONGO_CLIENT
@@ -32,6 +32,11 @@ class AccountManager:
     @staticmethod
     def get_account_manager():
         return db.account_user.find_one({'isAdmin': True})
+    
+class DahsboardView(generics.GenericAPIView):
+    permission_class = [IsAuthenticated]
+    def get(self, request):
+        pass
 
 
 class GetTransactions(generics.GenericAPIView):
@@ -373,7 +378,7 @@ class FundVirtualCard(generics.GenericAPIView):
                         return Response({'status': 'failed', 'error': 'security answer is not correct!'}, status=responses['failed'])
                     
                     virtual_card_update = db.virtual_cards.find_one_and_update(query,
-                        {'$inc': {'balance': amount}, '$set': {'last_fund_time': datetime.datetime.now()}},
+                        {'$inc': {'balance': amount}, '$set': {'last_fund_time': datetime.now()}},
                         return_document=True,
                         session=session
                     )
@@ -506,6 +511,24 @@ class LinkRealCard(generics.GenericAPIView):
         serializer.save()
 
         return BaseResponse.response(status=True, message='Card linked!', HTTP_STATUS=status.HTTP_200_OK)
+    
+class GetRealLInkedCards(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user
+        sorted_real_cards = db.real_cards.find({'card_user_id': user['_id']}, {'card_user_id': 0, 'account_manager_id': 0}).sort('createdAt', pymongo.DESCENDING)
+
+        real_cards = []
+        for real_card in sorted_real_cards:
+            real_card['_id'] = str(real_card['_id'])
+            real_cards.append(real_card)
+
+        data = {
+            'real_cards': real_cards,
+            'no_of_real_cards': len(real_cards)
+        }
+
+        return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
 
 class WireTransfer(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
@@ -557,6 +580,78 @@ class ApplyKYC(generics.GenericAPIView):
         serializer.save()
 
         return BaseResponse.response(status=True, message='Kyc applied successfully!', HTTP_STATUS=status.HTTP_200_OK)
+    
+class GetPastDebitCredit(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user
+
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=6)
+
+        query = {'account_user_id': user['_id'], 'createdAt': {'$gte': start_date, '$lte': end_date + timedelta(days=1)}}
+
+        # Aggregate the shipment by date
+        pipeline = [
+            {'$match': query},
+            {'$project': {"day": {"$dayOfWeek": "$createdAt"}, "date": {"$dateToString": {"format": "%Y-%m-%d", "date": "$createdAt"}}}},
+            {"$group": {"_id": {"day": "$day", "date": "$date"}, "count": {"$sum": 1}}},
+            {"$sort": {"_id.date": 1}}
+        ]
+
+        query['type'] = 'Credit'
+        credits = list(db.transactions.aggregate(pipeline))
+
+        query['type'] = 'Debit'
+        debits = list(db.transactions.aggregate(pipeline))
+
+        # Format the result
+        days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+        credits_this_week = []
+        debits_this_week = []
+
+        day_count_1 = {(start_date + timedelta(days=i)).strftime('%Y-%m-%d'): 0 for i in range(7)}
+        day_count_2 = {(start_date + timedelta(days=i)).strftime('%Y-%m-%d'): 0 for i in range(7)}
+
+
+        for credit in credits:
+            date_str = credit['_id']['date']
+            day_count_1[date_str] = credit['count']
+
+        for debit in debits:
+            date_str = debit['_id']['date']
+            day_count_2[date_str] = debit['count']
+
+        for date_str, count in day_count_1.items():
+            date = datetime.strptime(date_str, '%Y-%m-%d')
+            day_index = (date.weekday() + 1) % 7
+            day_name = days[day_index]
+            formatted_result = {
+                "day": day_name,
+                "date": date.strftime("%d/%m/%Y"),
+                "no_of_credits": count
+            }
+            credits_this_week.append(formatted_result)
+        
+        for date_str, count in day_count_2.items():
+            date = datetime.strptime(date_str, '%Y-%m-%d')
+            day_index = (date.weekday() + 1) % 7
+            day_name = days[day_index]
+            formatted_result = {
+                "day": day_name,
+                "date": date.strftime("%d/%m/%Y"),
+                "no_of_debits": count
+            }
+            debits_this_week.append(formatted_result)
+
+
+        data = {
+            'Credits': credits_this_week,
+            'Debits': debits_this_week,
+        }
+
+        return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
     
 
 

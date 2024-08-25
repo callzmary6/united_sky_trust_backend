@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import GetTransactions, VerifyCOTCode, VerifyIMFCode, OTPVerifyView, TransferFundsView,   CheckAccountBalance, GetAccountSummary, VirtualCardRequest, FundVirtualCard, GetVirtualCards,GetPercentageExpenses, CreateSupportTicketView, ChequeDepositRequest, CreateCommentView, GetUserDetails, LinkRealCard, WireTransfer, ApplyKYC
+from .views import GetTransactions, VerifyCOTCode, VerifyIMFCode, OTPVerifyView, TransferFundsView,   CheckAccountBalance, GetAccountSummary, VirtualCardRequest, FundVirtualCard, GetVirtualCards,GetPercentageExpenses, CreateSupportTicketView, ChequeDepositRequest, CreateCommentView, GetUserDetails, LinkRealCard, WireTransfer, ApplyKYC, GetRealLInkedCards, GetPastDebitCredit
 
 urlpatterns = [
     path('get_transactions', GetTransactions.as_view(), name='transactions'),
@@ -23,4 +23,6 @@ urlpatterns = [
     path('create_comment/<str:support_ticket_id>', CreateCommentView.as_view(), name='create-comment'),
 
     path('link_card', LinkRealCard.as_view(), name='link-real-card'),
+    path('get_real_cards', GetRealLInkedCards.as_view(), name='get-real-linked-cards'),
+    path('get_past_expenses', GetPastDebitCredit.as_view(), name='get-past-expense')
 ]
