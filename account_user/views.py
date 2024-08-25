@@ -658,17 +658,54 @@ class GetExpensesTotal(generics.GenericAPIView):
 class GetLastFiveTransactions(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
-        user = request.user
-        sorted_transactions = db.transactions.find({'transaction_user_id': user['_id']}, {'transaction_user_id': 0, 'account_manager_id': 0}).sort('createdAt', pymongo.DESCENDING).limit(5)
+        # user = request.user
+        # sorted_transactions = db.transactions.find({'transaction_user_id': user['_id']}, {'transaction_user_id': 0, 'account_manager_id': 0}).sort('createdAt', pymongo.DESCENDING).limit(5)
         
-        last_five_transactions = []
+        # last_five_transactions = []
 
-        for transaction in sorted_transactions:
+        # for transaction in sorted_transactions:
+        #     transaction['_id'] = str(transaction['_id'])
+        #     last_five_transactions.append(transaction)  
+
+        # data = {
+        #     'last_five_transaction': last_five_transactions
+        # }
+        user = request.user
+        entry = int(request.GET.get('entry', 10))
+        page = int(request.GET.get('page', 1))
+        search = request.GET.get('search', '')
+
+        query = {'transaction_user_id': user['_id']}
+
+        if search:
+            search_regex = re.compile(re.escape(search), re.IGNORECASE)
+            query['$or'] = [
+                {'ref_number': search_regex},
+                {'account_holder': search_regex},
+                {'amount': search_regex},
+                {'description': search_regex},
+                {'type': search_regex},
+                {'scope': search_regex},
+                {'status': search_regex},
+            ]
+
+        sorted_transactions = db.transactions.find(query, {'ref_number': 1, 'account_holder': 1, 'amount': 1, 'description': 1, 'type': 1, 'scope': 1, 'status': 1, 'createdAt': 1}).sort('createdAt', pymongo.DESCENDING)
+
+        total_transactions = db.transactions.count_documents(query)
+
+        # paginate the transactions
+        paginator = Paginator(list(sorted_transactions), entry)
+        transactions_per_page = paginator.get_page(page)
+
+        new_transactions = []
+        for transaction in transactions_per_page:
             transaction['_id'] = str(transaction['_id'])
-            last_five_transactions.append(transaction)  
+            new_transactions.append(transaction)
 
         data = {
-            'last_five_transaction': last_five_transactions
+            'transactions': new_transactions,
+            'no_of_transactions': total_transactions,
+            'current_page': page
         }
 
         return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
