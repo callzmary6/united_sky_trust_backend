@@ -111,6 +111,7 @@ class RealCardSerializer(serializers.Serializer):
     card_number = serializers.CharField()
     card_month = serializers.CharField()
     card_year = serializers.CharField()
+    card_type = serializers.CharField()
     cvv = serializers.CharField()
     card_user_id = serializers.CharField(read_only=True)
     account_manager_id = serializers.CharField(read_only=True)

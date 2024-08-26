@@ -650,18 +650,6 @@ class GetExpensesTotal(generics.GenericAPIView):
 class GetLastFiveTransactions(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
-        # user = request.user
-        # sorted_transactions = db.transactions.find({'transaction_user_id': user['_id']}, {'transaction_user_id': 0, 'account_manager_id': 0}).sort('createdAt', pymongo.DESCENDING).limit(5)
-        
-        # last_five_transactions = []
-
-        # for transaction in sorted_transactions:
-        #     transaction['_id'] = str(transaction['_id'])
-        #     last_five_transactions.append(transaction)  
-
-        # data = {
-        #     'last_five_transaction': last_five_transactions
-        # }
         user = request.user
         entry = int(request.GET.get('entry', 10))
         page = int(request.GET.get('page', 1))
