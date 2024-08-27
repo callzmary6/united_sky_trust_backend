@@ -3,6 +3,7 @@ from rest_framework.response import Response
 
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
+from django.template.loader import render_to_string
 
 from .serializers import AccountManagerSerializer, LoginAdminSerializer, AccountUserSerializer, PasswordResetSerializer, LoginAccountUserSerializer
 
@@ -15,6 +16,7 @@ from bson import ObjectId
 from cloudinary.uploader import upload
 from datetime import datetime, timedelta
 import jwt
+import pymongo
 
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
@@ -131,6 +133,7 @@ class CreateAccountUser(generics.GenericAPIView):
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
             email = serializer.validated_data['email']
+            first_name = serializer.validated_data['first_name']
             account_user_email = db.account_user.find_one({'email': email})
             serializer.validated_data['account_manager_id'] = user['_id']
 
@@ -139,11 +142,19 @@ class CreateAccountUser(generics.GenericAPIView):
                 db.otp_codes.create_index('expireAt', expireAfterSeconds=1800)
                 expire_at = datetime.utcnow() + timedelta(minutes=30)
                 db.otp_codes.insert_one({'code': code, 'expireAt': expire_at, 'email': email})
+
+                context = {
+                    'customer_name': account_user_email['first_name'],
+                    'otp': code
+                }
+
                 data = {
                     'subject': 'Email Confirmation',
                     'to': email,
-                    'body': f'Use this otp to verify your account {code}'
+                    'body': 'Use this otp to verify your account',
+                    'html_template': render_to_string('otp.html', context=context)
                 }
+
                 auth_util.email_send(data)
                 return BaseResponse.response(status=True, message='Account already exists, OTP has been sent to your email', HTTP_STATUS=status.HTTP_201_CREATED)
             user_data = serializer.save()
@@ -154,10 +165,17 @@ class CreateAccountUser(generics.GenericAPIView):
                 db.otp_codes.create_index('expireAt', expireAfterSeconds=1800)
                 expire_at = datetime.utcnow() + timedelta(minutes=30)
                 db.otp_codes.insert_one({'user_id': user_data.inserted_id, 'code': code, 'expireAt': expire_at, 'email': email})
+
+                context = {
+                    'customer_name': first_name,
+                    'otp': code
+                }
+
                 data = {
                     'subject': 'Email Confirmation',
                     'to': email,
-                    'body': f'Use this otp to verify your account {code}'
+                    'body': f'Use this otp to verify your account {code}',
+                    'html_template': render_to_string('otp.html', context=context)
                 }
                 auth_util.email_send(data)
 
@@ -232,11 +250,22 @@ class VerifyAccountUser(generics.GenericAPIView):
         user_code = db.otp_codes.find_one({'email': email})
         
         if not user_code:
-            return Response({'status': 'failed', 'error': 'code has expired'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'status': 'failed', 'message': 'Code has expired!'}, status=status.HTTP_400_BAD_REQUEST)
         if  otp_code != user_code['code']:
-            return Response({'status': 'failed', 'error': 'code is incorrect'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'status': 'failed', 'message': 'Code is incorrect!'}, status=status.HTTP_400_BAD_REQUEST)
         else:
-            db.account_user.update_one({'email': email}, {'$set': {'isVerified': True}})
+            updated_user = db.account_user.find_one_and_update({'email': email}, {'$set': {'isVerified': True}}, return_document=pymongo.ReturnDocument.AFTER)
+            context = {
+                    'customer_name': updated_user['first_name'],
+                }
+
+            data = {
+                'subject': 'Complete KYC',
+                'to': email,
+                'body': f'Complete your kyc application!',
+                'html_template': render_to_string('kyc.html', context=context)
+            }
+            auth_util.email_send(data)
             return BaseResponse.response(status=True, message='Code is verified', HTTP_STATUS=status.HTTP_200_OK)
         
 class GenerateOTPCode(generics.GenericAPIView):

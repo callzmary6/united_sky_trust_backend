@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your OTP Code</title>
+    <style>
+        body { font-family: Archivo, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: auto; background-color: #ffffff; padding: 20px; border-radius: 10px; }
+        .header { font-size:20px; text-align: center; padding: 20px; background-color: #0033a0; color: #ffffff; }
+        .header img { max-width: 150px; }
+        .otp-code { font-size: 24px; font-weight: bold; text-align: center; margin: 20px 0; padding: 10px; background-color: #e0e7ff; color: #0033a0; border-radius: 5px; }
+        .content { padding: 20px; }
+        .content p{ font-size:15px; margin: 10px 0px }
+        .cta { text-align: center; margin-top: 20px; }
+        .cta a { text-decoration: none; color: #ffffff; background-color: #28a745; padding: 15px 25px; border-radius: 5px; }
+        .footer { text-align: center; font-size: 12px; color: #888888; margin-top: 40px; }
+        .security { color: #ff0000; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Unity Heritage Trust</h1>
+        </div>
+        <div class="content">
+            <p>Dear {{ customer_name }},</p>
+            <p>Please use the following One-Time Password (OTP) to complete your transaction:</p>
+            <div class="otp-code">
+                {{ otp }}
+            </div>
+            <p>This OTP is valid for the next 30 minutes.</p>
+            <p class="security">For your security, please do not share this OTP with anyone.</p>
+        </div>
+       
+        <div class="footer">
+            <p>If you did not request this OTP, please contact our support team immediately.</p>
+            <p>Unity Heritage Trust | info@unityheritagetrust.com | unityheritagetrust.com | 0828989383 </p>
+        </div>
+    </div>
+</body>
+</html>

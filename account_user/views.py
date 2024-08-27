@@ -12,6 +12,7 @@ from .utils import Util as user_util
 from united_sky_trust.base_response import BaseResponse
 
 from django.conf import settings
+from django.template.loader import render_to_string
 from django.core.paginator import Paginator
 from cloudinary.uploader import upload
 import uuid
@@ -200,7 +201,7 @@ class TransferFundsView(generics.GenericAPIView):
                         
                     # create transaction records
                     # Sender Transaction
-                    db.transactions.insert_one({
+                    sender_transaction_data = {
                         'type': 'Debit',
                         'amount': amount,
                         'scope': 'Local Transfer',
@@ -214,11 +215,28 @@ class TransferFundsView(generics.GenericAPIView):
                         'createdAt': createdAt,
                         'bank_name': bank_name,
                         'bank_routing_number': bank_routing_number,
-                    }, session=session)
+                    }
+                    db.transactions.insert_one(sender_transaction_data, session=session)
+
+                    sender_transaction_data['account_number'] = data['account_number']
+                    sender_transaction_data['location'] = 'Unity Heritage Trust'
+                    sender_transaction_data['date'] = str(createdAt)[:10]
+                    sender_transaction_data['time'] = str(createdAt)[11:19]
+                    sender_transaction_data['balance'] = sender_result['account_balance']
+                    sender_transaction_data['account_currency'] = sender['account_currency']
+
+                    data = {
+                        'subject': 'Transaction Notification',
+                        'to': sender['email'],
+                        'body': f'Your transaction has been completed!',
+                        'html_template': render_to_string('transaction.html', context=sender_transaction_data)
+                    }
+
+                    auth_util.email_send(data)
 
                     # Receiver Transaction
                     if isFake == False:
-                        db.transactions.insert_one({
+                        receiver_transaction_data = {
                             'type': 'Credit',
                             'amount': amount,
                             'scope': 'Local Transfer',
@@ -230,7 +248,24 @@ class TransferFundsView(generics.GenericAPIView):
                             'status': 'Completed',
                             'ref_number': ref_number,
                             'createdAt': createdAt
-                        }, session=session)
+                        }
+                        db.transactions.insert_one(receiver_transaction_data, session=session)
+
+                        receiver_transaction_data['account_number'] = data['account_number']
+                        receiver_transaction_data['location'] = 'Unity Heritage Trust'
+                        sender_transaction_data['date'] = str(createdAt)[:10]
+                        sender_transaction_data['time'] = str(createdAt)[11:19]
+                        sender_transaction_data['balance'] = receiver_result['account_balance']
+                        sender_transaction_data['account_currency'] = receiver_result['account_currency']
+
+                        data = {
+                            'subject': 'Transaction Notification',
+                            'to': sender['email'],
+                            'body': f'Your transaction has been completed!',
+                            'html_template': render_to_string('transaction.html', context=receiver_transaction_data)
+                        }
+
+                    auth_util.email_send(data)
 
             return Response({'status': 'success', 'message': 'Transaction Successful'}, status=responses['success'])
         
@@ -500,6 +535,10 @@ class WireTransfer(generics.GenericAPIView):
         user = request.user
         data = request.data
         account_manager = AccountManager.get_account_manager()
+
+        ref_number = manager_util.generate_code()
+        createdAt = datetime.now()
+
         db.transactions.insert_one({
             'type': 'Debit',
             'amount': data['amount'],
@@ -510,16 +549,37 @@ class WireTransfer(generics.GenericAPIView):
             'account_manager_id': account_manager['_id'],
             'account_holder': '',
             'status': 'Completed',
-            'ref_number': manager_util.generate_code(),
-            'createdAt': datetime.now(),
+            'ref_number': ref_number,
+            'createdAt': createdAt,
             'state_province': data['state_province'],
             'recipient_full_name': data['recepient_full_name'],
             'iban': data['iban'],
             'swift_code': data['swift_code'],
             'delivery_date': data['delivery_date'],
             'wire_type': data['type'],
-            'delivery_data': data['delivery_date']
+            'delivery_data': data['delivery_date'],
+            'account_number': data['account_number']
         })
+        context = {
+                    'account_number': data['account_number'],
+                    'type': data['type'],
+                    'description': data['description'],
+                    'location': 'Unity Heritage Trust',
+                    'date': str(createdAt)[:10],
+                    'time': str(createdAt)[11:19],
+                    'status': 'Completed',
+                    'ref_number': ref_number,
+                    'balance': user['account_balance'],
+                    'account_currency': user['account_currency']
+                }
+
+        data = {
+            'subject': 'Transaction Notification',
+            'to': user['email'],
+            'body': f'Complete your kyc application!',
+            'html_template': render_to_string('transaction.html', context=context)
+        }
+        auth_util.email_send(data)
 
         return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
     
