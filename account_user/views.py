@@ -163,7 +163,7 @@ class TransferFundsView(generics.GenericAPIView):
         auth_pin = data['auth_pin']
 
         # start transactions for users 
-        if auth_pin == sender['cot_code']:
+        if auth_pin == sender['auth_pin']:
             with client.start_session() as session:
                 with session.start_transaction():
                     sender_result = db.account_user.find_one_and_update({
@@ -539,6 +539,10 @@ class WireTransfer(generics.GenericAPIView):
         ref_number = manager_util.generate_code()
         createdAt = datetime.now()
 
+        
+        if data['amount'] < user['account_balance']:
+            return BaseResponse.response(status=True, message='Insufficient funds!', HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
+        
         db.transactions.insert_one({
             'type': 'Debit',
             'amount': data['amount'],
