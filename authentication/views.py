@@ -20,6 +20,7 @@ import pymongo
 
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
+from twilio.rest import Client
 
 db = settings.DB
             
@@ -350,20 +351,15 @@ class TwoFactorAuthentication(generics.GenericAPIView):
         update = {'$set': {'is_two_factor': False}}
         db.account_user.update_one({'_id': ObjectId(acc_id)}, update)
         return BaseResponse.response(status=True, message='two factor disbaled', HTTP_STATUS=status.HTTP_200_OK)
-        
-
     
-
-    
-    
-            
-
-
-        
-
-
-            
-
-        
-
-
+# class TwilioTest(generics.GenericAPIView):
+#     def post(self, request):
+#         message_to_broadcast = ("Verify your phone number!")
+#         client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+#         for recipient in settings.SMS_BROADCAST_TO_NUMBERS:
+#             if recipient:
+#                 client.messages.create(to=recipient,
+#                                     from_='+2348155076237',
+#                                     body=message_to_broadcast)
+                
+#         return BaseResponse.response(status=True, message='Message sent successfully', HTTP_STATUS=status.HTTP_200_OK)

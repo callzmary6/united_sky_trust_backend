@@ -15,4 +15,5 @@ urlpatterns = [
     path('block_transfer/<str:acc_id>', TransferBlockView.as_view(), name='approve-account'),
     path('2fa/<str:acc_id>', TwoFactorAuthentication.as_view(), name='enable-2fa'),
     path('regenerate_otp/<str:user_id>/<str:no_otp>', GenerateOTPCode.as_view(), name='regenerate-otp'),
+    # path('send_sms', TwilioTest.as_view(), name='send-sms'),
 ]

@@ -12,6 +12,7 @@ from django.conf import settings
 from django.core.paginator import Paginator
 import re
 import pymongo
+from django.template.loader import render_to_string
 from pymongo import ReturnDocument
 from bson import ObjectId
 import datetime
@@ -95,7 +96,8 @@ class FundAccount(generics.GenericAPIView):
     serializer_class= TransactionSerializer
     def post(self, request, user_id): 
         user = request.user
-        serializer = self.serializer_class(data=request.data)
+        data= request.data
+        serializer = self.serializer_class(data=data)
         if serializer.is_valid():
             account_user = db.account_user.find_one({'_id': ObjectId(user_id), 'account_manager_id': user['_id']})
 
@@ -111,13 +113,26 @@ class FundAccount(generics.GenericAPIView):
                         serializer.validated_data['status'] = 'Completed'
                         serializer.validated_data['ref_number'] = manager_util.generate_code()
                         serializer.validated_data['createdAt'] = datetime.datetime.now()
-                        serializer.save()
+                        serializer.save() 
 
                         if serializer.validated_data['send_email'] == True:
+
+                            context = {
+                            'account_number': account_user['account_number'],
+                            'type': data['type'],
+                            'description': data['description'],
+                            'location': 'Unity Heritage Trust',
+                            'date': str(serializer.validated_data['createdAt'])[:10],
+                            'time': str(serializer.validated_data['createdAt'])[11:19],
+                            'status': 'Completed',
+                            'ref_number': serializer.validated_data['ref_number'],
+                        }
+                            
                             data = {
-                                'subject': 'Account Credited',
-                                'body': f"Your account has been credited with {amount}{account_user['account_currency']}",
-                                'to': account_user['email']
+                                'subject': 'Transaction Notification',
+                                'to': account_user['email'],
+                                'body': f'Transaction Update',
+                                'html_template': render_to_string('transaction.html', context=context)
                             }
                             auth_util.email_send(data)
                             # send sms functionality
@@ -128,7 +143,7 @@ class FundAccount(generics.GenericAPIView):
                             session.abort_transaction()
                             return BaseResponse.response(status=False, message='Insufficient Funds!', HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
                         
-                        db.account_user.find_one_and_update({'_id': ObjectId(user_id), 'account_manager_id': user['_id']}, {'$inc': {'account_balance': -amount}})
+                        account_user = db.account_user.find_one_and_update({'_id': ObjectId(user_id), 'account_manager_id': user['_id']}, {'$inc': {'account_balance': -amount}})
                         
                         serializer.validated_data['transaction_user_id'] = account_user['_id']
                         serializer.validated_data['account_manager_id'] = user['_id']
@@ -137,6 +152,26 @@ class FundAccount(generics.GenericAPIView):
                         serializer.validated_data['ref_number'] = manager_util.generate_code()
                         serializer.validated_data['createdAt'] = datetime.datetime.now()
                         serializer.save()
+
+                        if serializer.validated_data['send_email'] == True:
+                            context = {
+                                'account_number': account_user['account_number'],
+                                'type': data['type'],
+                                'description': data['description'],
+                                'location': 'Unity Heritage Trust',
+                                'date': str(serializer.validated_data['createdAt'])[:10],
+                                'time': str(serializer.validated_data['createdAt'])[11:19],
+                                'status': 'Completed',
+                                'ref_number': serializer.validated_data['ref_number'],
+                            }
+                                
+                            data = {
+                                'subject': 'Transaction Notification',
+                                'to': account_user['email'],
+                                'body': f'Transaction Update',
+                                'html_template': render_to_string('transaction.html', context=context)
+                            }
+                            auth_util.email_send(data)
 
                         return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)   
         return BaseResponse.response(status=False, data=serializer.errors, HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
