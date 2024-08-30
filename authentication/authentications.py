@@ -49,7 +49,7 @@ class JWTAuthentication(authentication.BaseAuthentication):
         # create the jwt payload 
         payload = {
             'user_identifier': user['email'],
-            'exp': datetime.now() + timedelta(days=5),
+            'exp': datetime.now() + timedelta(days=30),
             'iat': datetime.now().timestamp(),
             'id': str(user['_id']),
             'isAdmin': user['isAdmin']
@@ -62,6 +62,6 @@ class JWTAuthentication(authentication.BaseAuthentication):
     
     @classmethod
     def get_the_token_from_header(cls, token):
-        token = token.replace('Bearer', '').replace(' ', '') 
+        token = token.replace('Bearer', '').replace('', '') 
         return token 
     
