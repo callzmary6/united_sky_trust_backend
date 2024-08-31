@@ -62,6 +62,6 @@ class JWTAuthentication(authentication.BaseAuthentication):
     
     @classmethod
     def get_the_token_from_header(cls, token):
-        token = token.replace('Bearer', '').replace('', '') 
+        token = token.replace('Bearer', '').replace(' ', '') 
         return token 
     
