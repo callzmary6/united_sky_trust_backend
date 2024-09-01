@@ -72,7 +72,7 @@ class AccountUserSerializer(serializers.Serializer):
     account_balance = serializers.FloatField(default=0.00)
     imf_code = serializers.CharField()
     cot_code = serializers.CharField()
-    auth_pin = serializers.CharField(read_only=True)
+    auth_pin = serializers.CharField()
     password = serializers.CharField(write_only=True)
     is_authenticated = serializers.CharField(default=True)
     createdAt = serializers.CharField(read_only=True)

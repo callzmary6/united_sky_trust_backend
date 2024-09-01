@@ -359,7 +359,7 @@ class TwoFactorAuthentication(generics.GenericAPIView):
 #         for recipient in settings.SMS_BROADCAST_TO_NUMBERS:
 #             if recipient:
 #                 client.messages.create(to=recipient,
-#                                     from_='+2348155076237',
+#                                     from_='+2349016010761',
 #                                     body=message_to_broadcast)
                 
 #         return BaseResponse.response(status=True, message='Message sent successfully', HTTP_STATUS=status.HTTP_200_OK)

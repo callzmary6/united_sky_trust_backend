@@ -32,13 +32,14 @@ class JWTAuthentication(authentication.BaseAuthentication):
         # Get user from the database
         email = payload.get('user_identifier')
         if email is None:
-            AuthenticationFailed('User identifier  not found in JWT')
+            AuthenticationFailed('User identifier not found in JWT')
 
         user = db.account_user.find_one({'email': email})
         if user is None:
             raise AuthenticationFailed('User not found')
         
         # return the user and token payload 
+        # user['_id']
         return user, payload
     
     def authenticate_header(self, request):

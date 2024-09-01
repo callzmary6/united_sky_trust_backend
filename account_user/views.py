@@ -169,7 +169,7 @@ class TransferFundsView(generics.GenericAPIView):
                     sender_result = db.account_user.find_one_and_update({
                         '_id': sender['_id'], 'account_balance': {'$gte': amount}},
                         {'$inc': {'account_balance': -amount}, '$set': {'last_balance_update_time': datetime.now()}},
-                        return_document=True,
+                        return_document=pymongo.ReturnDocument.AFTER,
                         session=session
                     )
 
@@ -179,14 +179,14 @@ class TransferFundsView(generics.GenericAPIView):
                     
                     if not sender_result:
                         session.abort_transaction()
-                        return Response({'status': 'failed', 'message': 'Insufficient Funds!'}, status=responses['failed'])
+                        return BaseResponse.response(status=False, message='Insufficient funds!', HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
                     
                     createdAt = sender_result['last_balance_update_time']
                     
                     receiver_result = db.account_user.find_one_and_update(
                         {'account_number': account_number},
                         {'$inc': {'account_balance': amount}},
-                        return_document= True,
+                        return_document= pymongo.ReturnDocument.AFTER,
                         session=session
                         )
 
@@ -218,7 +218,6 @@ class TransferFundsView(generics.GenericAPIView):
                     }
                     db.transactions.insert_one(sender_transaction_data, session=session)
 
-                    sender_transaction_data['account_number'] = data['account_number']
                     sender_transaction_data['location'] = 'Unity Heritage Trust'
                     sender_transaction_data['date'] = str(createdAt)[:10]
                     sender_transaction_data['time'] = str(createdAt)[11:19]
@@ -226,7 +225,7 @@ class TransferFundsView(generics.GenericAPIView):
                     sender_transaction_data['account_currency'] = sender['account_currency']
 
                     data = {
-                        'subject': 'Transaction Notification',
+                        'subject': 'Transaction Notification (Debit)',
                         'to': sender['email'],
                         'body': f'Your transaction has been completed!',
                         'html_template': render_to_string('transaction.html', context=sender_transaction_data)
@@ -251,23 +250,22 @@ class TransferFundsView(generics.GenericAPIView):
                         }
                         db.transactions.insert_one(receiver_transaction_data, session=session)
 
-                        receiver_transaction_data['account_number'] = data['account_number']
                         receiver_transaction_data['location'] = 'Unity Heritage Trust'
-                        sender_transaction_data['date'] = str(createdAt)[:10]
-                        sender_transaction_data['time'] = str(createdAt)[11:19]
-                        sender_transaction_data['balance'] = receiver_result['account_balance']
-                        sender_transaction_data['account_currency'] = receiver_result['account_currency']
+                        receiver_transaction_data['date'] = str(createdAt)[:10]
+                        receiver_transaction_data['time'] = str(createdAt)[11:19]
+                        receiver_transaction_data['balance'] = receiver_result['account_balance']
+                        receiver_transaction_data['account_currency'] = receiver_result['account_currency']
 
                         data = {
-                            'subject': 'Transaction Notification',
-                            'to': sender['email'],
+                            'subject': 'Transaction Notification (Credit)',
+                            'to': receiver_result['email'],
                             'body': f'Your transaction has been completed!',
                             'html_template': render_to_string('transaction.html', context=receiver_transaction_data)
                         }
 
-                    auth_util.email_send(data)
+                        auth_util.email_send(data)
 
-            return Response({'status': 'success', 'message': 'Transaction Successful'}, status=responses['success'])
+            return Response({'status': 'success', 'message': 'Transaction Successful!'}, status=responses['success'])
         
         return Response({'status': 'failed', 'error': 'Auth_pin is incorrect!'}, status=responses['failed'])
 
@@ -523,6 +521,7 @@ class GetRealLInkedCards(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
         user = request.user
+
         real_card = db.real_cards.find_one({'card_user_id': user['_id']}, {'card_user_id': 0, 'account_manager_id': 0})
 
         real_card['_id'] = str(real_card['_id'])
