@@ -168,7 +168,7 @@ class TransferFundsView(generics.GenericAPIView):
                 with session.start_transaction():
                     sender_result = db.account_user.find_one_and_update({
                         '_id': sender['_id'], 'account_balance': {'$gte': amount}},
-                        {'$inc': {'account_balance': -amount}, '$set': {'last_balance_update_time': datetime.now()}},
+                        {'$inc': {'account_balance': -amount}, '$set': {'last_balance_update_time': datetime.now()+timedelta(minutes=60)}},
                         return_document=pymongo.ReturnDocument.AFTER,
                         session=session
                     )
