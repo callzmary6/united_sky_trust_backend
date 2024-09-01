@@ -524,6 +524,9 @@ class GetRealLInkedCards(generics.GenericAPIView):
 
         real_card = db.real_cards.find_one({'card_user_id': user['_id']}, {'card_user_id': 0, 'account_manager_id': 0})
 
+        if real_card is None:
+            return BaseResponse.response(status=False, message='No card found for this user!', HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
+
         return BaseResponse.response(status=True, data=real_card, HTTP_STATUS=status.HTTP_200_OK)
 
 class WireTransfer(generics.GenericAPIView):
