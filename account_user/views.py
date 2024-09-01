@@ -524,11 +524,6 @@ class GetRealLInkedCards(generics.GenericAPIView):
 
         real_card = db.real_cards.find_one({'card_user_id': user['_id']}, {'card_user_id': 0, 'account_manager_id': 0})
 
-        if real_card is not None:
-            real_card['_id'] = str(real_card['_id'])
-        else: 
-            pass
-
         return BaseResponse.response(status=True, data=real_card, HTTP_STATUS=status.HTTP_200_OK)
 
 class WireTransfer(generics.GenericAPIView):
