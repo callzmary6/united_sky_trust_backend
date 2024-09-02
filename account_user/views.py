@@ -527,6 +527,8 @@ class GetRealLInkedCards(generics.GenericAPIView):
         if real_card is None:
             return BaseResponse.response(status=False, message='No card found for this user!', HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
 
+        real_card['_id'] = str(real_card['_id'])
+
         return BaseResponse.response(status=True, data=real_card, HTTP_STATUS=status.HTTP_200_OK)
 
 class WireTransfer(generics.GenericAPIView):
