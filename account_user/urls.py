@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import VerifyCOTCode, VerifyIMFCode, OTPVerifyView, TransferFundsView,   CheckAccountBalance, GetAccountSummary, VirtualCardRequest, FundVirtualCard, GetVirtualCards,GetExpensesTotal, CreateSupportTicketView, ChequeDepositRequest, CreateCommentView, GetUserDetails, LinkRealCard, WireTransfer, ApplyKYC, GetRealLInkedCards, GetPastDebitCredit, GetLastFiveTransactions
+from .views import VerifyCOTCode, VerifyIMFCode, OTPVerifyView, TransferFundsView,   CheckAccountBalance, GetAccountSummary, VirtualCardRequest, FundVirtualCard, GetVirtualCards,GetExpensesTotal, CreateSupportTicketView, ChequeDepositRequest, CreateCommentView, GetUserDetails, LinkRealCard, WireTransfer, ApplyKYC, GetRealLInkedCards, GetPastDebitCredit, GetLastFiveTransactions, SendTransferOtp
 
 urlpatterns = [
     # path('get_transactions', GetTransactions.as_view(), name='transactions'),
@@ -25,5 +25,6 @@ urlpatterns = [
     path('get_real_cards', GetRealLInkedCards.as_view(), name='get-real-linked-cards'),
     path('get_past_expenses', GetPastDebitCredit.as_view(), name='get-past-expense'),
     path('expenses_total', GetExpensesTotal.as_view(), name='get-total-expenses'),
-    path('last_five_transactions', GetLastFiveTransactions.as_view(), name='get-last-five-transactions')
+    path('last_five_transactions', GetLastFiveTransactions.as_view(), name='get-last-five-transactions'),
+    path('send_transfer_otp', SendTransferOtp.as_view(), name='send-transfer-otp'),
 ]

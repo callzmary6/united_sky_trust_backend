@@ -34,42 +34,6 @@ class AccountManager:
     def get_account_manager():
         return db.account_user.find_one({'isAdmin': True})
     
-class DahsboardView(generics.GenericAPIView):
-    permission_class = [IsAuthenticated]
-    def get(self, request):
-        pass
-
-
-# class GetTransactions(generics.GenericAPIView):
-#     permission_classes = [IsAuthenticated, ]
-#     def get(self, request):
-#         user = request.user
-
-#         all_transactions = []
-#         credit = []
-#         debit = []
-
-#         transactions = db.transactions.find({'transaction_user_id': user['_id']})
-
-#         sorted_transactions = sorted(transactions, key=lambda x: x['createdAt'], reverse=True)
-
-#         for transaction in sorted_transactions:
-#             all_transactions.append(transaction)
-
-#             if transaction['type'] == 'Credit':
-#                 credit.append(transaction)
-#             if transaction['type'] == 'Debit':
-#                 debit.append(transaction)
-
-#         return Response({
-#             'status': 'success',
-#             'transactions': {
-#                 'all': all_transactions,
-#                 'credit': credit,
-#                 'debit': debit,
-#             },
-#         }, status=responses['success'])
-
 class GetUserDetails(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
@@ -110,8 +74,8 @@ class VerifyIMFCode(generics.GenericAPIView):
                 'to': user_data['email']
             }
             auth_util.email_send(data)
-            expire_at = datetime.now() + timedelta(seconds=300)
-            db.otp_codes.insert_one({'_id': uuid.uuid4().hex[:24], 'user_id': user_data['_id'], 'code': otp, 'expireAt': expire_at})
+            expire_at = datetime.now() + timedelta(seconds=600)
+            db.otp_codes.insert_one({'user_id': user_data['_id'], 'code': otp, 'expireAt': expire_at})
             return Response({'status': 'success', 'message': 'cot code verified successfully, An otp has been sent to your email!'}, status=responses['success'])
         else:
             return Response({'status': 'failed', 'error': 'imf code is not correct'}, status=responses['failed'])
@@ -139,7 +103,32 @@ class CheckAccountBalance(generics.GenericAPIView):
         if user_data is None:
             return Response({'status': 'failed', 'error': 'Insufficient Funds!', 'account_balance': request.user['account_balance']}, status=responses['failed'])
         
-        return Response({'status': 'success', 'balance': request.user['account_balance']}, status=responses['success'])       
+        return Response({'status': 'success', 'balance': request.user['account_balance']}, status=responses['success'])  
+
+class SendTransferOtp(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        user = request.user
+        otp = auth_util.generate_number(6) 
+
+        context = {
+            'customer_name': user['first_name'],
+            'otp': otp
+        }
+
+        data = {
+            'to': user['email'],
+            'body': 'Use this otp to verify your transaction',
+            'subject': 'Verify Transaction',
+            'html_template': render_to_string('otp.html', context)
+        }  
+
+        expire_at = datetime.now() + timedelta(seconds=600)
+        db.otp_codes.insert_one({'user_id': user['_id'], 'code': otp, 'expireAt': expire_at})
+
+        auth_util.email_send(data)
+
+        return BaseResponse.response(status=True, message='Opt sent successfully', HTTP_STATUS=status.HTTP_200_OK)
 
 class TransferFundsView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated, ]
@@ -161,6 +150,26 @@ class TransferFundsView(generics.GenericAPIView):
         account_holder = data['account_holder']
         description = data['description']
         auth_pin = data['auth_pin']
+        otp = data['otp']
+
+        otp_code = db.otp_codes.find_one({'user_id': sender['_id'], 'code': otp})
+
+        err_msg = {
+                'isError': True
+            }
+
+        if otp_code is None:
+            
+            return BaseResponse.error_response(message='Code is invalid!', status_code=status.HTTP_400_BAD_REQUEST)
+        
+        if sender['isSuspended'] == True:
+            return BaseResponse.error_response(message='Transaction failed, Account is suspended!', status_code=status.HTTP_400_BAD_REQUEST)
+        
+        if sender['isTransferBlocked'] == True:
+            return BaseResponse.error_response(message='Transaction failed, Transfer is blocked for this user!', status_code=status.HTTP_400_BAD_REQUEST)  
+
+        if otp != otp_code['code']:
+            return BaseResponse.error_response(message='Otp is not correct!', status_code=status.HTTP_400_BAD_REQUEST)  
 
         # start transactions for users 
         if auth_pin == sender['auth_pin']:
@@ -179,7 +188,7 @@ class TransferFundsView(generics.GenericAPIView):
                     
                     if not sender_result:
                         session.abort_transaction()
-                        return BaseResponse.response(status=False, message='Insufficient funds!', HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
+                        return BaseResponse.response(status=False, message='Insufficient funds!', data=err_msg, HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
                     
                     createdAt = sender_result['last_balance_update_time']
                     
@@ -233,6 +242,8 @@ class TransferFundsView(generics.GenericAPIView):
 
                     auth_util.email_send(data)
 
+                    db.otp_codes.delete_one({'user_id': sender['_id']})
+
                     # Receiver Transaction
                     if isFake == False:
                         receiver_transaction_data = {
@@ -265,9 +276,9 @@ class TransferFundsView(generics.GenericAPIView):
 
                         auth_util.email_send(data)
 
-            return Response({'status': 'success', 'message': 'Transaction Successful!'}, status=responses['success'])
+            return BaseResponse.response(status=True, message='Transaction successful!', HTTP_STATUS=status.HTTP_200_OK)
         
-        return Response({'status': 'failed', 'error': 'Auth_pin is incorrect!'}, status=responses['failed'])
+        return BaseResponse.error_response(message='Transaction failed, Auth pin is incorrect!', status_code=status.HTTP_400_BAD_REQUEST)
 
 
 class GetAccountSummary(generics.GenericAPIView):
@@ -542,7 +553,7 @@ class WireTransfer(generics.GenericAPIView):
         createdAt = datetime.now()
 
         
-        if data['amount'] < user['account_balance']:
+        if float(data['amount']) < user['account_balance']:
             return BaseResponse.response(status=True, message='Insufficient funds!', HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
         
         db.transactions.insert_one({
@@ -581,7 +592,7 @@ class WireTransfer(generics.GenericAPIView):
 
         data = {
             'subject': 'Transaction Notification',
-            'to': user['email'],
+            'to': [user['email'], data['email']],
             'body': f'Complete your kyc application!',
             'html_template': render_to_string('transaction.html', context=context)
         }
