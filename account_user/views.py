@@ -154,10 +154,6 @@ class TransferFundsView(generics.GenericAPIView):
 
         otp_code = db.otp_codes.find_one({'user_id': sender['_id'], 'code': otp})
 
-        err_msg = {
-                'isError': True
-            }
-
         if otp_code is None:
             
             return BaseResponse.error_response(message='Code is invalid!', status_code=status.HTTP_400_BAD_REQUEST)
@@ -188,7 +184,7 @@ class TransferFundsView(generics.GenericAPIView):
                     
                     if not sender_result:
                         session.abort_transaction()
-                        return BaseResponse.response(status=False, message='Insufficient funds!', data=err_msg, HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
+                        return BaseResponse.response(status=False, message='Insufficient funds!', HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
                     
                     createdAt = sender_result['last_balance_update_time']
                     
@@ -198,7 +194,6 @@ class TransferFundsView(generics.GenericAPIView):
                         return_document= pymongo.ReturnDocument.AFTER,
                         session=session
                         )
-
 
                     # send credit email and sms functionality
                     
@@ -545,39 +540,60 @@ class GetRealLInkedCards(generics.GenericAPIView):
 class WireTransfer(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
-        user = request.user
+        sender = request.user
         data = request.data
         account_manager = AccountManager.get_account_manager()
 
         ref_number = manager_util.generate_code()
         createdAt = datetime.now()
 
+        otp_code = db.otp_codes.find_one({'user_id': sender['_id'], 'code': data['otp']})
+
+        if otp_code is None:
+            
+            return BaseResponse.error_response(message='Code is invalid!', status_code=status.HTTP_400_BAD_REQUEST)
         
-        if float(data['amount']) < user['account_balance']:
+        if sender['isSuspended'] == True:
+            return BaseResponse.error_response(message='Transaction failed, Account is suspended!', status_code=status.HTTP_400_BAD_REQUEST)
+        
+        if sender['isTransferBlocked'] == True:
+            return BaseResponse.error_response(message='Transaction failed, Transfer is blocked for this user!', status_code=status.HTTP_400_BAD_REQUEST)  
+
+        if data['otp'] != otp_code['code']:
+            return BaseResponse.error_response(message='Otp is not correct!', status_code=status.HTTP_400_BAD_REQUEST) 
+
+        
+        if float(data['amount']) > sender['account_balance']:
             return BaseResponse.response(status=True, message='Insufficient funds!', HTTP_STATUS=status.HTTP_400_BAD_REQUEST)
         
-        db.transactions.insert_one({
-            'type': 'Debit',
-            'amount': data['amount'],
-            'scope': 'Wire Transfer',
-            'description': data['description'],
-            # 'account_currency': data['currency'],
-            'transaction_user_id': user['_id'],
-            'account_manager_id': account_manager['_id'],
-            'account_holder': '',
-            'status': 'Completed',
-            'ref_number': ref_number,
-            'createdAt': createdAt,
-            'state_province': data['state_province'],
-            'recipient_full_name': data['recepient_full_name'],
-            'iban': data['iban'],
-            'swift_code': data['swift_code'],
-            'delivery_date': data['delivery_date'],
-            'wire_type': data['type'],
-            'delivery_data': data['delivery_date'],
-            'account_number': data['account_number']
-        })
-        context = {
+        if data['auth_pin'] == sender['auth_pin']:
+
+            db.account_user.find_one_and_update({'_id': sender['_id']}, {'$inc': {'account_balance': -float(data['amount'])}})
+        
+            db.transactions.insert_one({
+                'type': 'Debit',
+                'amount': data['amount'],
+                'scope': 'Wire Transfer',
+                'description': data['description'],
+                # 'account_currency': data['currency'],
+                'transaction_user_id': sender['_id'],
+                'account_manager_id': account_manager['_id'],
+                'account_holder': '',
+                'status': 'Completed',
+                'ref_number': ref_number,
+                'createdAt': createdAt,
+                'state_province': data['state_province'],
+                'recipient_full_name': data['recepient_full_name'],
+                'iban': data['iban'],
+                'swift_code': data['swift_code'],
+                'delivery_date': data['delivery_date'],
+                'wire_type': data['type'],
+                'delivery_data': data['delivery_date'],
+                'account_number': data['account_number']
+            })
+
+            context = {
+                    'amount': data['amount'],
                     'account_number': data['account_number'],
                     'type': data['type'],
                     'description': data['description'],
@@ -586,19 +602,20 @@ class WireTransfer(generics.GenericAPIView):
                     'time': str(createdAt)[11:19],
                     'status': 'Completed',
                     'ref_number': ref_number,
-                    'balance': user['account_balance'],
-                    'account_currency': user['account_currency']
+                    'balance': sender['account_balance'],
+                    'account_currency': sender['account_currency']
                 }
 
-        data = {
-            'subject': 'Transaction Notification',
-            'to': [user['email'], data['email']],
-            'body': f'Complete your kyc application!',
-            'html_template': render_to_string('transaction.html', context=context)
-        }
-        auth_util.email_send(data)
+            data = {
+                'subject': 'Transaction Notification',
+                'to': [sender['email'], data['email']],
+                'body': f'Complete your kyc application!',
+                'html_template': render_to_string('transaction.html', context=context)
+            }
+            auth_util.email_send(data)
 
-        return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
+            return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
+        return BaseResponse.error_response(message='Transaction failed, Auth pin is not correct!', status_code=status.HTTP_400_BAD_REQUEST)
     
 class ApplyKYC(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]

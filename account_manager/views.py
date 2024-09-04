@@ -495,6 +495,10 @@ class WireTransfer(generics.GenericAPIView):
     def post(self, request):
         user = request.user
         data = request.data
+
+        createdAt = datetime.datetime.now()
+        ref_number = manager_util.generate_code()
+
         db.transactions.insert_one({
             'type': 'Debit',
             'amount': data['amount'],
@@ -505,9 +509,31 @@ class WireTransfer(generics.GenericAPIView):
             'account_manager_id': user['_id'],
             'account_holder': '',
             'status': 'Completed',
-            'ref_number': manager_util.generate_code(),
-            'createdAt': datetime.datetime.now()
+            'ref_number': ref_number,
+            'createdAt': createdAt
         })
+
+        context = {
+                'amount': data['amount'],
+                'account_number': data['account_number'],
+                'type': 'Transfer',
+                'description': 'Wire Transfer',
+                'location': 'Unity Heritage Trust',
+                'date': str(createdAt)[:10],
+                'time': str(createdAt)[11:19],
+                'status': 'Completed',
+                'ref_number': ref_number,
+                # 'balance': user['account_balance'],
+                'account_currency': 'NGN'
+            }
+
+        data = {
+            'subject': 'Transaction Notification',
+            'to': data['email'],
+            'body': f'Complete your kyc application!',
+            'html_template': render_to_string('transaction.html', context=context)
+        }
+        auth_util.email_send(data)
 
         return BaseResponse.response(status=True, HTTP_STATUS=status.HTTP_200_OK)
 

@@ -50,7 +50,7 @@ class JWTAuthentication(authentication.BaseAuthentication):
         # create the jwt payload 
         payload = {
             'user_identifier': user['email'],
-            'exp': datetime.now() + timedelta(days=30),
+            'exp': datetime.now() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRY_TIME),
             'iat': datetime.now().timestamp(),
             'id': str(user['_id']),
             'isAdmin': user['isAdmin']

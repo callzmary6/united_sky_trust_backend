@@ -69,15 +69,11 @@
                     <td>{{ref_number}}</td>
                 </tr>
             </table>
-            {% if balance %}
             <div class="balance-info">
                 <p>The balances on this account as at {{date}} {{time}} are as follows:</p>
                 <p>Current Balance: {{account_currency}} {{balance}}</p>
                 <p>Available Balance: {{account_currency}} {{balance}}</p>
             </div>
-            {% else %}
-            <div style="display: none;"></div>
-            {% endif %}
             <p class="security-note">
                 The privacy and security of your bank account details are important to us. If you would prefer that we do not display your account balance in every transaction alert sent to you via email, please contact us.
             </p>

@@ -14,11 +14,17 @@ class Util:
     
     @staticmethod
     def email_send(data):
+        to_list = []
+        if isinstance(data['to'], list):
+            to_list = data['to']
+        else:
+            to_list.append(data['to'])
+
         email = EmailMultiAlternatives(
             subject=data['subject'],
             body=data['body'],
             from_email=settings.EMAIL_HOST_USER,
-            to=[data['to']],
+            to=to_list,
         )
         email.attach_alternative(data['html_template'], 'text/html')
         email.send()
