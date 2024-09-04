@@ -43,43 +43,7 @@ class GetUserDetails(generics.GenericAPIView):
         user['account_manager_id'] = str(user['account_manager_id'])
 
         return BaseResponse.response(status=True, data=user, HTTP_STATUS=status.HTTP_200_OK)
-       
-class VerifyCOTCode(generics.GenericAPIView):
-    def post(self, request):
-        user_id = request.user['_id']
-        cot_code = request.data.get('cot_code', '')
-
-        user_data = db.account_user.find_one({'_id': user_id})
-
-        if cot_code == user_data['cot_code']:
-            db.account_user.update_one({'_id': user_id}, {'$set': {'is_verified_cot': True}})
-            return Response({'status': 'success', 'message': 'cot code verified successfully!'}, status=responses['success'])
-        else:
-            return Response({'status': 'failed', 'error': 'cot vode is not correct'}, status=responses['failed'])
               
-class VerifyIMFCode(generics.GenericAPIView):
-    permission_classes = [IsAuthenticated]
-    def post(self, request):
-        user_id = request.user['_id']
-        imf_code = request.data.get('imf_code', '')
-        user_data = db.account_user.find_one({'_id': user_id})
-
-        otp = auth_util.generate_number(6)
-
-        if imf_code == user_data['imf_code']:
-            db.account_user.update_one({'_id': user_id}, {'$set': {'is_verified_imf': True}})
-            data = {
-                'subject': 'Verify your otp',
-                'body': f'{otp}',
-                'to': user_data['email']
-            }
-            auth_util.email_send(data)
-            expire_at = datetime.now() + timedelta(seconds=600)
-            db.otp_codes.insert_one({'user_id': user_data['_id'], 'code': otp, 'expireAt': expire_at})
-            return Response({'status': 'success', 'message': 'cot code verified successfully, An otp has been sent to your email!'}, status=responses['success'])
-        else:
-            return Response({'status': 'failed', 'error': 'imf code is not correct'}, status=responses['failed'])
-
 class OTPVerifyView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated, ]
     def post(self, request):
@@ -212,7 +176,7 @@ class TransferFundsView(generics.GenericAPIView):
                         'description': description,
                         'transaction_user_id': sender['_id'],
                         'account_manager_id': account_manager['_id'],
-                        'account_holder': beneficiary_account_holder,
+                        'account_holder': f'{sender['first_name']} {sender['middle_name']} {sender['last_name']}',
                         'account_number': account_number,
                         'status': 'Completed',
                         'ref_number': ref_number,
@@ -248,6 +212,7 @@ class TransferFundsView(generics.GenericAPIView):
                             'description': description,
                             'transaction_user_id': receiver_result['_id'],
                             'account_manager_id': account_manager['_id'],
+                            'account_holder': beneficiary_account_holder,
                             'account_number': sender_result['account_number'],
                             'bank_name': 'United Heritage Trust',
                             'status': 'Completed',
@@ -578,7 +543,7 @@ class WireTransfer(generics.GenericAPIView):
                 # 'account_currency': data['currency'],
                 'transaction_user_id': sender['_id'],
                 'account_manager_id': account_manager['_id'],
-                'account_holder': '',
+                'account_holder': f'{sender['first_name']} {sender['middle_name']} {sender['last_name']}',
                 'status': 'Completed',
                 'ref_number': ref_number,
                 'createdAt': createdAt,
@@ -782,29 +747,4 @@ class GetLastFiveTransactions(generics.GenericAPIView):
         }
 
         return BaseResponse.response(status=True, data=data, HTTP_STATUS=status.HTTP_200_OK)
-    
-
-
-
-                  
-
-
-
-
-
-
-                
-
-    
-
-    
-
-
-
-
-        
-            
-
-
-
-       
+          
