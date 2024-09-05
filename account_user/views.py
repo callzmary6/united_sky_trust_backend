@@ -201,7 +201,7 @@ class TransferFundsView(generics.GenericAPIView):
 
                     auth_util.email_send(data)
 
-                    db.otp_codes.delete_one({'user_id': sender['_id']})
+                    db.otp_codes.delete_one({'user_id': sender['_id'], 'code': otp})
 
                     # Receiver Transaction
                     if isFake == False:
@@ -534,6 +534,8 @@ class WireTransfer(generics.GenericAPIView):
         if data['auth_pin'] == sender['auth_pin']:
 
             db.account_user.find_one_and_update({'_id': sender['_id']}, {'$inc': {'account_balance': -float(data['amount'])}})
+
+            db.otp_codes.delete_one({'user_id': sender['_id'], 'code': data['otp']})
         
             db.transactions.insert_one({
                 'type': 'Debit',

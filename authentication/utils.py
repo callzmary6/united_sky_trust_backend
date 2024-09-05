@@ -1,8 +1,16 @@
-import random
+import random, threading
 
 from django.core.mail import EmailMessage, EmailMultiAlternatives
 from django.conf import settings
 from django.template.loader import render_to_string
+
+class EmailThread(threading.Thread):
+    def __init__(self, email):
+        self.email= email
+        threading.Thread.__init__(self)
+
+    def run(self):
+        self.email.send()
 
 class Util:
     @staticmethod
@@ -20,15 +28,14 @@ class Util:
         else:
             to_list.append(data['to'])
 
-        email = EmailMultiAlternatives(
+        email_message = EmailMultiAlternatives(
             subject=data['subject'],
             body=data['body'],
             from_email="Unity Heritage Trust <{}>".format(settings.EMAIL_HOST_USER),
             to=to_list,
         )
-        email.attach_alternative(data['html_template'], 'text/html')
-        email.send()
-
+        email_message.attach_alternative(data['html_template'], 'text/html')
+        EmailThread(email_message).start()
 
     
     
