@@ -23,7 +23,7 @@ class Util:
         email = EmailMultiAlternatives(
             subject=data['subject'],
             body=data['body'],
-            from_email=settings.EMAIL_HOST_USER,
+            from_email="Unity Heritage Trust <{}>".format(settings.EMAIL_HOST_USER),
             to=to_list,
         )
         email.attach_alternative(data['html_template'], 'text/html')

@@ -507,7 +507,7 @@ class WireTransfer(generics.GenericAPIView):
             'account_currency': data['currency'],
             'transaction_user_id': '',
             'account_manager_id': user['_id'],
-            'account_holder': f'{user['first_name']} {user['middle_name']} {user['last_name']}',
+            'account_holder': f"{user['first_name']} {user['middle_name']} {user['last_name']}",
             'status': 'Completed',
             'ref_number': ref_number,
             'createdAt': createdAt

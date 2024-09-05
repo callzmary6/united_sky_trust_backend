@@ -22,7 +22,7 @@ class Util:
     def send_custom_mail(data):
         email = EmailMessage(
             subject= data['subject'],
-            from_email = settings.EMAIL_HOST_USER,
+            from_email = "Unity Heritage Trust <{}>".format(settings.EMAIL_HOST_USER),
             to = [data['to']],
             body = data['body'],
         )
