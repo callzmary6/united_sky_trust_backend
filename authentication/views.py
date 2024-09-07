@@ -127,6 +127,7 @@ class CreateAccountUser(generics.GenericAPIView):
     def post(self, request):
         data = request.data
         user = request.user
+        isAnonymous = False
         if isinstance(user, AnonymousUser):
             isAnonymous = True
             user = AccountManager.get_account_manager()
