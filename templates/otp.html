@@ -7,8 +7,9 @@
     <style>
         body { font-family: Archivo, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
         .container { max-width: 600px; margin: auto; background-color: #ffffff; padding: 20px; border-radius: 10px; }
-        .header { font-size:20px; text-align: center; padding: 20px; background-color: #0033a0; color: #ffffff; }
-        .header img { max-width: 150px; }
+        .header { font-size:20px; text-align: center; padding: 20px; color: #ffffff; }
+        {% comment %} background-color: #0033a0; {% endcomment %}
+        .header img { width: 200px; height: auto; }
         .otp-code { font-size: 24px; font-weight: bold; text-align: center; margin: 20px 0; padding: 10px; background-color: #e0e7ff; color: #0033a0; border-radius: 5px; }
         .content { padding: 20px; }
         .content p{ font-size:15px; margin: 10px 0px }
@@ -21,7 +22,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Unity Heritage Trust</h1>
+            <img src="https://res.cloudinary.com/dl3fsdyxi/image/upload/v1725827111/Trimmed-logo_inesym.png" alt="Unity Heritage Trust">
         </div>
         <div class="content">
             <p>Dear {{ customer_name }},</p>
